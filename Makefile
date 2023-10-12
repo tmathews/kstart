@@ -1,7 +1,7 @@
 FLAGS = $(shell pkg-config --cflags --libs librsvg-2.0)
 
 build: protocol
-	cc -g -o kstart main.c keyhold.c draw.c lib.c waywrap/*.c\
+	cc -g -o kstart main.c keyhold.c draw.c lib.c map/hash.c waywrap/*.c\
 		-lwayland-client -lwayland-cursor -lrt -lxkbcommon -lcairo -lm $(FLAGS)
 
 protocol:

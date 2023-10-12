@@ -1,5 +1,6 @@
 #include <librsvg/rsvg.h>
 #include "draw.h"
+#include "map/hash.h"
 
 #define KDATA_DIR "/usr/local/share/kallos/data/"
 
@@ -10,13 +11,14 @@ struct shortcut {
 	char *name;
 	char *command;
 	char *icon_filename;
+	struct shortcut *next;
 };
 
 struct app {
 	struct client_state *state;
 	struct color clr_main, clr_bg;
 	char *fmt_time;
-	struct shortcut **shortcuts;
+	struct shortcut *shortcut_head;
 	RsvgHandle *svg_battery;
 	RsvgHandle *svg_bluetooth;
 	RsvgHandle *svg_bluetooth_off;
@@ -30,6 +32,7 @@ struct app {
 	RsvgHandle *svg_wifi_off;
 	RsvgHandle *svg_wifi_ok;
 	RsvgHandle *svg_wifi_weak;
+	struct map *images;
 };
 
 struct app *app_new();
@@ -37,3 +40,4 @@ void app_free(struct app *app);
 bool is_valid_char(const char *);
 RsvgHandle *load_svg(const char *);
 void datestr(char *str, const char *fmt);
+struct shortcut *read_shortcuts(char *filename);

@@ -92,6 +92,10 @@ wl_pointer_frame(void *data, struct wl_pointer *wl_pointer)
 {
 	struct client_state *client_state = data;
 	struct pointer_event *event = &client_state->pointer_event;
+	if (event->event_mask & POINTER_EVENT_ENTER) {
+		wl_pointer_set_cursor(wl_pointer, event->serial, 
+			client_state->cursor_surface, 0, 0);
+	}
 
 	struct surface_state *next = client_state->root_surface;
 	while (next != NULL) {

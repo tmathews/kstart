@@ -1,0 +1,18 @@
+name Steam
+icon /usr/share/icons/hicolor/256x256/apps/steam.png
+command steam
+
+name Alacritty
+icon /usr/share/icons/other/alacritty.png
+command alacritty
+
+name Signal
+icon /usr/share/icons/hicolor/64x64/apps/signal-desktop.png
+command signal
+
+name Discord
+command xdg-open https://discord.com/channels/@me
+
+name Krita
+icon /usr/share/icons/other/krita.png
+command Krita.AppImage

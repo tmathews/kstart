@@ -23,6 +23,8 @@ const char *placeholder_str = "Search applications...";
 struct color clr_text, clr_placeholder;
 struct keyhold *keyhold_root = NULL;
 
+cairo_surface_t *surf;
+
 int main(int argc, char *argv[]) {
 	clr_placeholder = hex2rgb(0x999999);
 	clr_text = hex2rgb(0x313131);
@@ -147,9 +149,12 @@ void draw(struct surface_state *state, cairo_t *cr) {
 		.width = w - 40, 
 		.height = 36, 
 	});
-
-	// TODO draw apps
-	
+	draw_apps(cr, app, (struct rect){
+		.x = 20,
+		.y = 112,
+		.width = w - 20,
+		.height = h - 80,
+	});
 	draw_options(cr, app, (struct rect){
 		.x = 20,
 		.y = h - 20 - 60,
@@ -217,7 +222,38 @@ void draw_search(cairo_t *cr, struct app *app, struct rect box) {
 }
 
 void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
-
+	int x, y, column_width, row_height, gap;
+	struct color clr = hex2rgb(0xffffff);
+	x = bounds.x;
+	y = bounds.y;
+	column_width = (bounds.width - bounds.x) / 6;
+	row_height = (bounds.height - bounds.y) / 4;
+	gap = 10;
+	
+	struct shortcut *scp = app->shortcut_head;
+	for (;scp != NULL; scp = scp->next) {
+		struct shortcut sc = *scp;
+		if (sc.icon_filename != NULL) {
+			cairo_surface_t *img = (cairo_surface_t *)map_get(app->images, sc.icon_filename);
+			if (img != NULL) {
+				draw_img_square(cr, img, x+(column_width-32)/2, y, 32);
+			}
+		}
+		cairo_set_source_rgb(cr, clr.r, clr.g, clr.b);
+		cairo_select_font_face(cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL,
+				CAIRO_FONT_WEIGHT_NORMAL);
+		cairo_set_font_size(cr, 14);
+		draw_text_centered(cr, sc.name, (struct point){
+			.x = x+(column_width/2), 
+			.y = y+32+16+6,
+		});
+		if (x + column_width > bounds.x + bounds.width) {
+			y += row_height + gap;
+			x = bounds.x;
+		} else {
+			x += column_width;
+		}
+	}
 }
 
 void draw_options(cairo_t *cr, struct app *app, struct rect bounds) {

@@ -33,6 +33,17 @@ void draw_svg_square(cairo_t *cr, RsvgHandle *handle, int x, int y, int size) {
 	rsvg_handle_render_document(handle, cr, &rect, NULL);
 }
 
+void draw_img_square(cairo_t *cr, cairo_surface_t *img, int x, int y, int size) {
+	int w = cairo_image_surface_get_width(img);
+	float scale = (float)size / (float)w;
+	cairo_save(cr);
+	cairo_translate(cr, x, y);
+	cairo_scale(cr, scale, scale);
+	cairo_set_source_surface(cr, img, 0, 0);
+	cairo_paint(cr);
+	cairo_restore(cr);
+}
+
 double draw_text(cairo_t *cr, const char *str, int origin_x, int origin_y) {
 	cairo_font_extents_t fe;
 	cairo_text_extents_t te;
@@ -66,3 +77,20 @@ double draw_text_rtl(cairo_t *cr, const char *str, struct point origin) {
 	origin.x -= x;
 	return draw_text(cr, str, origin.x, origin.y);
 }
+
+double draw_text_centered(cairo_t *cr, const char *str, struct point origin) {
+	cairo_text_extents_t te;
+	char letter[2];
+	double x = 0;
+	int len = strlen(str);
+	for (int i=0; i < len; i++) {
+	    *letter = '\0';
+	    strncat(letter, str + i, 1);
+	    cairo_text_extents(cr, letter, &te);
+		x += te.x_advance;
+	}
+	origin.x -= x/2;
+	return draw_text(cr, str, origin.x, origin.y);
+}
+
+
