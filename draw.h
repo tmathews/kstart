@@ -22,6 +22,7 @@ struct rect {
 struct color hex2rgb(unsigned int val);
 void path_rounded_rect(cairo_t *, double x, double y, double width, 
 	double height, double r);
+void draw_box(cairo_t *, struct rect);
 void draw_svg_square(cairo_t *, RsvgHandle *, int x, int y, int size);
 void draw_img_square(cairo_t *cr, cairo_surface_t *img, int x, int y, int size);
 double draw_text(cairo_t *cr, const char *str, int origin_x, int origin_y);

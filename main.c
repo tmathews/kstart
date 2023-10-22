@@ -18,7 +18,6 @@ void on_key_repeat(xkb_keysym_t);
 
 struct app *app;
 bool running = true;
-char input_str[1024];
 const char *placeholder_str = "Search applications...";
 struct color clr_text, clr_placeholder;
 struct keyhold *keyhold_root = NULL;
@@ -28,7 +27,6 @@ cairo_surface_t *surf;
 int main(int argc, char *argv[]) {
 	clr_placeholder = hex2rgb(0x999999);
 	clr_text = hex2rgb(0x313131);
-	strcpy(input_str, "");
 
 	app = app_new();
 
@@ -47,29 +45,24 @@ int main(int argc, char *argv[]) {
 	xdg_toplevel_set_min_size(a->xdg_toplevel, width, height);
 	xdg_toplevel_set_app_id(a->xdg_toplevel, "kallos-start");
 	zxdg_toplevel_decoration_v1_set_mode(a->decos, 1);
-
 	bool first = true;
     while (state->root_surface != NULL && running == true) {
 		wl_display_dispatch(state->wl_display);
 		keyhold_process(keyhold_root, state->key_repeat_delay, 
 			state->key_repeat_rate, on_key_repeat);
-
 		// If there is no active input let's bounce out of here!
 		if (!first && state->active_surface_pointer == NULL && 
 			state->active_surface_keyboard == NULL) {
 			running = false;
 		}
+		app_process_inputs(app);
+		if (app_process_events(app)) {
+			running = false;
+		}
 		first = false;
 	}
 	client_state_destroy(state);
-
-	printf("freeing app... ");
 	app_free(app);
-	printf("freed\n");
-	if (strlen(input_str) > 0) {
-		printf("do app! %s\n", input_str);
-	}
-	printf("exit\n");
     return 0;
 }
 
@@ -85,26 +78,31 @@ void on_draw(struct surface_state *state, unsigned char *data) {
 
 void on_key_repeat(xkb_keysym_t sym) {
 	//printf("got key repeat! %d\n", sym);
-	if (sym == XKB_KEY_BackSpace)
-		input_str[strlen(input_str)-1] = '\0';
+	if (sym == XKB_KEY_BackSpace) {
+		app->search_str[strlen(app->search_str)-1] = '\0';
+	}
 }
 
 void on_keyboard(uint32_t state, xkb_keysym_t sym, const char *utf8) {
 	if (state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 		keyhold_root = keyhold_add(keyhold_root, sym);
 		if (sym == XKB_KEY_BackSpace) {
-			int len = strlen(input_str);
-			input_str[len-1] = '\0';
+			int len = strlen(app->search_str);
+			app->search_str[len-1] = '\0';
 		} else if (sym == XKB_KEY_Escape) {
 			running = false;
-			input_str[0] = '\0';
+			app->search_str[0] = '\0';
 			printf("quit application!\n");
 		} else if (sym == XKB_KEY_Return) {
-			printf("start app at index 0!\n");
-			running = false;
+			if (strlen(app->search_str) > 0 && app->shortcut_first != NULL) {
+				app->events = add_cevent(app->events, (struct custom_event){
+					.type = 2,
+					.next = NULL,
+				});
+			}
 		} else if (is_valid_char(utf8)) {
 			//printf("char '%s'\n", utf8);
-			strcat(input_str, utf8);
+			strcat(app->search_str, utf8);
 		}
 	} else {
 		keyhold_root = keyhold_remove(keyhold_root, sym);
@@ -207,13 +205,13 @@ void draw_search(cairo_t *cr, struct app *app, struct rect box) {
 
 	// Draw the input text or placeholder
 	const char *str;
-	if (strlen(input_str) <= 0) {
+	if (strlen(app->search_str) <= 0) {
 		cairo_set_source_rgb(cr, clr_placeholder.r, clr_placeholder.g, 
 			clr_placeholder.b);
 		str = placeholder_str;
 	} else {
 		cairo_set_source_rgb(cr, clr_text.r, clr_text.g, clr_text.b);
-		str = input_str;
+		str = app->search_str;
 	}
 	cairo_select_font_face(cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, 
 		CAIRO_FONT_WEIGHT_BOLD);
@@ -229,16 +227,41 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 	column_width = (bounds.width - bounds.x) / 6;
 	row_height = (bounds.height - bounds.y) / 4;
 	gap = 10;
-	
+
+	app->shortcut_first = NULL;
+	struct rect zone;
 	struct shortcut *scp = app->shortcut_head;
 	for (;scp != NULL; scp = scp->next) {
+		if (!shortcut_matches(scp, app->search_str))
+			continue;
+		if (app->shortcut_first == NULL)
+			app->shortcut_first = scp;
 		struct shortcut sc = *scp;
+		// Draw background
+		zone = (struct rect){.x = x, .y = y, .width = column_width, .height = row_height};
+		if (app->input.active && rect_contains(zone, app->input.pos)) { // is selected index OR pointer in area
+			cairo_save(cr);
+			path_rounded_rect(cr, x-5, y-5, column_width+10, row_height+15, 3.0);
+			cairo_set_source_rgba(cr, clr.r, clr.g, clr.b, 0.2);
+			cairo_set_line_width(cr, 0.0);
+			cairo_fill(cr);
+			cairo_restore(cr);
+			if (app->input.released) {
+				app->events = add_cevent(app->events, (struct custom_event){
+					.type = 1,
+					.shortcut = scp,
+					.next = NULL,
+				});
+			}
+		}
+		// Draw icon
 		if (sc.icon_filename != NULL) {
 			cairo_surface_t *img = (cairo_surface_t *)map_get(app->images, sc.icon_filename);
 			if (img != NULL) {
 				draw_img_square(cr, img, x+(column_width-32)/2, y, 32);
 			}
 		}
+		// Draw text
 		cairo_set_source_rgb(cr, clr.r, clr.g, clr.b);
 		cairo_select_font_face(cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL,
 				CAIRO_FONT_WEIGHT_NORMAL);
@@ -247,6 +270,7 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 			.x = x+(column_width/2), 
 			.y = y+32+16+6,
 		});
+		// Position adjustment
 		if (x + column_width > bounds.x + bounds.width) {
 			y += row_height + gap;
 			x = bounds.x;

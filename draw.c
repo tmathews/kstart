@@ -92,5 +92,3 @@ double draw_text_centered(cairo_t *cr, const char *str, struct point origin) {
 	origin.x -= x/2;
 	return draw_text(cr, str, origin.x, origin.y);
 }
-
-
