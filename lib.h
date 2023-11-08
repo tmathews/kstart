@@ -1,6 +1,7 @@
 #include <librsvg/rsvg.h>
 #include "draw.h"
 #include "map/hash.h"
+#include "map/list.h"
 #include "waywrap/waywrap.h"
 
 #define KDATA_DIR "/usr/local/share/kallos/data/"
@@ -30,10 +31,16 @@ struct custom_event {
 	struct shortcut *shortcut;
 };
 
+struct hitzone {
+	struct rect rect;
+	struct custom_event event;
+};
+
 struct app {
 	struct client_state *state;
 	struct inputs input;
 	struct custom_event *events;
+	struct list *hitzones;
 	struct color clr_main, clr_bg;
 	char *fmt_time;
 	struct shortcut *shortcut_head;
@@ -53,6 +60,8 @@ struct app {
 	RsvgHandle *svg_wifi_weak;
 	struct map *images;
 	char search_str[2048];
+	float battery_percent;
+	bool battery_charging;
 };
 
 struct app *app_new();

@@ -3,6 +3,7 @@
 #include <librsvg/rsvg.h>
 #include <wordexp.h>
 #include "waywrap/waywrap.h"
+#include "sys/power.h"
 #include "keyhold.h"
 #include "draw.h"
 #include "lib.h"
@@ -15,6 +16,7 @@ void draw_options(cairo_t *, struct app *, struct rect);
 void on_draw(struct surface_state *, unsigned char *);
 void on_keyboard(uint32_t, xkb_keysym_t, const char *); 
 void on_key_repeat(xkb_keysym_t);
+void update_power(struct app *);
 
 struct app *app;
 bool running = true;
@@ -29,6 +31,7 @@ int main(int argc, char *argv[]) {
 	clr_text = hex2rgb(0x313131);
 
 	app = app_new();
+	update_power(app);
 
    	struct client_state *state = client_state_new();
 	state->on_keyboard = on_keyboard;
@@ -37,6 +40,7 @@ int main(int argc, char *argv[]) {
 	struct surface_state *a;
 	int width = 600;
 	int height = 400;
+	int tick = 0;
     a = surface_state_new(state, "Kallos Start Menu", width, height);
 	a->on_draw = on_draw;
 
@@ -45,6 +49,7 @@ int main(int argc, char *argv[]) {
 	xdg_toplevel_set_min_size(a->xdg_toplevel, width, height);
 	xdg_toplevel_set_app_id(a->xdg_toplevel, "kallos-start");
 	zxdg_toplevel_decoration_v1_set_mode(a->decos, 1);
+
 	bool first = true;
     while (state->root_surface != NULL && running == true) {
 		wl_display_dispatch(state->wl_display);
@@ -59,6 +64,11 @@ int main(int argc, char *argv[]) {
 		if (app_process_events(app)) {
 			running = false;
 		}
+		if (tick > 180) {
+			update_power(app);
+			tick = 0;
+		}
+		tick++;
 		first = false;
 	}
 	client_state_destroy(state);
@@ -150,8 +160,8 @@ void draw(struct surface_state *state, cairo_t *cr) {
 	draw_apps(cr, app, (struct rect){
 		.x = 20,
 		.y = 112,
-		.width = w - 20,
-		.height = h - 80,
+		.width = w - 40,
+		.height = h - 80 - 112,
 	});
 	draw_options(cr, app, (struct rect){
 		.x = 20,
@@ -176,17 +186,23 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	// Draw Wifi
 	draw_svg_square(cr, app->svg_wifi_full, x, 16, icon_size);
 	x += icon_size + 8;
-	offset = draw_text(cr, "-56dBm", x, 30);
+	offset = draw_text(cr, "N/I", x, 30);
 	// Draw Battery
 	x += offset + spacing;
 	draw_svg_square(cr, app->svg_battery, x, 16, icon_size);
+	// Draw battery square
+	int fh = (int)(10*(app->battery_percent/100));
+	path_rounded_rect(cr, x+4, 20+(10-fh), 8, fh, 0);
+	cairo_set_source_rgb(cr, 1, 1, 1);
+	cairo_fill_preserve(cr);
 	x += icon_size + 8;
-	offset = draw_text(cr, "99%", x, 30);
+	sprintf(str, "%0.0f%%", app->battery_percent);
+	offset = draw_text(cr, str, x, 30);
 	// Draw Bluetooth
 	x += offset + spacing;
 	draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
 	x += icon_size + 8;
-	draw_text(cr, "On", x, 30);
+	draw_text(cr, "N/I", x, 30);
 }
 
 void draw_search(cairo_t *cr, struct app *app, struct rect box) {
@@ -224,9 +240,9 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 	struct color clr = hex2rgb(0xffffff);
 	x = bounds.x;
 	y = bounds.y;
-	column_width = (bounds.width - bounds.x) / 6;
-	row_height = (bounds.height - bounds.y) / 4;
-	gap = 10;
+	column_width = bounds.width / 5;
+	row_height = bounds.height / 3;
+	gap = 25;
 
 	app->shortcut_first = NULL;
 	struct rect zone;
@@ -241,24 +257,27 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 		zone = (struct rect){.x = x, .y = y, .width = column_width, .height = row_height};
 		if (app->input.active && rect_contains(zone, app->input.pos)) { // is selected index OR pointer in area
 			cairo_save(cr);
-			path_rounded_rect(cr, x-5, y-5, column_width+10, row_height+15, 3.0);
+			path_rounded_rect(cr, x, y, column_width, row_height, 5.0);
 			cairo_set_source_rgba(cr, clr.r, clr.g, clr.b, 0.2);
 			cairo_set_line_width(cr, 0.0);
 			cairo_fill(cr);
 			cairo_restore(cr);
-			if (app->input.released) {
-				app->events = add_cevent(app->events, (struct custom_event){
-					.type = 1,
-					.shortcut = scp,
-					.next = NULL,
-				});
-			}
+			// add hitzone here
+
+			//if (app->input.released) {
+				//printf("got trigger\n");
+				//app->events = add_cevent(app->events, (struct custom_event){
+				//	.type = 1,
+				//	.shortcut = scp,
+				//	.next = NULL,
+				//});
+			//}
 		}
 		// Draw icon
 		if (sc.icon_filename != NULL) {
 			cairo_surface_t *img = (cairo_surface_t *)map_get(app->images, sc.icon_filename);
 			if (img != NULL) {
-				draw_img_square(cr, img, x+(column_width-32)/2, y, 32);
+				draw_img_square(cr, img, x+(column_width-32)/2, y+8, 32);
 			}
 		}
 		// Draw text
@@ -268,10 +287,10 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 		cairo_set_font_size(cr, 14);
 		draw_text_centered(cr, sc.name, (struct point){
 			.x = x+(column_width/2), 
-			.y = y+32+16+6,
+			.y = (y+32+16+6)+6,
 		});
 		// Position adjustment
-		if (x + column_width > bounds.x + bounds.width) {
+		if (x + column_width >= bounds.x + bounds.width) {
 			y += row_height + gap;
 			x = bounds.x;
 		} else {
@@ -297,5 +316,30 @@ void draw_options(cairo_t *cr, struct app *app, struct rect bounds) {
 	for (int i = 0; i < 4; i++) {
 		draw_svg_square(cr, icons[i], x, y, icon_size);
 		x -= spacing + icon_size;
+	}
+}
+
+void update_power(struct app *app) {
+	app->battery_charging = false;
+	unsigned int count, total, sum;
+	total = 0;
+	sum = 0;
+	char **list = batteries_list(&count);
+	//printf("got %d batteries\n", count);
+	for (int i = 0; i < count; i++) {
+		char *bat = list[i];
+		int cap = battery_get_capacity(bat);
+		if (cap >= 0) {
+			total++;
+			sum += cap;
+			enum battery_status status = battery_get_status(bat);
+			if (status == BS_CHARGING)
+				app->battery_charging = true;
+		}
+		free(bat);
+	}
+	free(list);
+	if (total != 0) {
+		app->battery_percent = (float)sum / (float)total;
 	}
 }

@@ -1,8 +1,14 @@
 FLAGS = $(shell pkg-config --cflags --libs librsvg-2.0)
 
 build: protocol
-	cc -g -o kstart main.c keyhold.c draw.c lib.c map/hash.c waywrap/*.c\
-		-lwayland-client -lwayland-cursor -lrt -lxkbcommon -lcairo -lm $(FLAGS)
+	cc -g -o kstart \
+		main.c keyhold.c draw.c lib.c \
+		map/hash.c \
+		map/list.c \
+		sys/power.c \
+		waywrap/*.c \
+		-lwayland-client -lwayland-cursor -lrt -lxkbcommon -lcairo \
+		-lm $(FLAGS)
 
 protocol:
 	wayland-scanner private-code \

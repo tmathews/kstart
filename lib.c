@@ -18,9 +18,10 @@ RsvgHandle *load_svg(const char *filename) {
 struct app *app_new() {
 	struct app *app = malloc(sizeof(struct app));
 	app->events = NULL;
+	app->hitzones = list_new();
 	strcpy(app->search_str, "");
 
-	// TODO read colors from kallos config file
+	// TODO read colors from kallos config file: ~/.config/kallos/colors
 	app->clr_main = hex2rgb(0xAB8449);
 	app->clr_bg = hex2rgb(0x100F0D);
 
@@ -178,9 +179,11 @@ void app_process_inputs(struct app *app) {
 	i->last = pe.time;
 	if (pe.event_mask&POINTER_EVENT_BUTTON) {
 		if (pe.button == 272) {
+			printf("pe event\n");
 			bool was_pressed = i->pressed;
 			i->pressed = pe.state == 1;
-			if (was_pressed && !i->pressed) {	
+			if (was_pressed && !i->pressed) {
+				printf("released!\n");
 				i->released = true;
 			}
 		}
