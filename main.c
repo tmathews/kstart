@@ -120,6 +120,9 @@ void on_keyboard(uint32_t state, xkb_keysym_t sym, const char *utf8) {
 }
 
 void draw(struct surface_state *state, cairo_t *cr) {
+	list_iter(app->hitzones, free);
+	list_empty(app->hitzones);
+
 	struct color clr_main, clr_bg;
 	
 	int w = state->width;
@@ -255,6 +258,14 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 		struct shortcut sc = *scp;
 		// Draw background
 		zone = (struct rect){.x = x, .y = y, .width = column_width, .height = row_height};
+
+		struct hitzone *hzone = malloc(sizeof(struct hitzone));
+		hzone->rect = zone;
+		hzone->event = (struct custom_event){
+			.type = 1,
+			.shortcut = scp,
+		};
+		list_append(app->hitzones, hzone);
 		if (app->input.active && rect_contains(zone, app->input.pos)) { // is selected index OR pointer in area
 			cairo_save(cr);
 			path_rounded_rect(cr, x, y, column_width, row_height, 5.0);
@@ -262,8 +273,6 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 			cairo_set_line_width(cr, 0.0);
 			cairo_fill(cr);
 			cairo_restore(cr);
-			// add hitzone here
-
 			//if (app->input.released) {
 				//printf("got trigger\n");
 				//app->events = add_cevent(app->events, (struct custom_event){

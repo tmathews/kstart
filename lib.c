@@ -15,6 +15,31 @@ RsvgHandle *load_svg(const char *filename) {
 	return handle;
 }
 
+int run_cmd(const char *str) {
+	wordexp_t w;
+	switch (wordexp(str, &w, WRDE_NOCMD)) {
+		case 0:
+			break;
+		case WRDE_NOSPACE:
+		case WRDE_CMDSUB:
+		case WRDE_BADCHAR:
+		default:
+			return -1;
+	}
+	if (w.we_wordc < 1) {
+		return -1;
+	}
+	const char *bin = w.we_wordv[0];
+	if (!bin || !*bin) {
+		return -1;
+	}
+	if (strchr(bin, '/'))
+		execv(bin, w.we_wordv);
+	else
+		execvp(bin, w.we_wordv);
+	return 0;
+}
+
 struct app *app_new() {
 	struct app *app = malloc(sizeof(struct app));
 	app->events = NULL;
@@ -194,32 +219,24 @@ void app_process_inputs(struct app *app) {
 	}
 }
 
-int run_cmd(const char *str) {
-	wordexp_t w;
-	switch (wordexp(str, &w, WRDE_NOCMD)) {
-		case 0:
-			break;
-		case WRDE_NOSPACE:
-		case WRDE_CMDSUB:
-		case WRDE_BADCHAR:
-		default:
-			return -1;
+void app_check_hitzones(struct app *app) {
+	if (!app->input.released)
+		return;
+	struct point pos = app->input.pos;
+	for (int i = 0; i < app->hitzones->length; i++) {
+		struct hitzone *zone = (struct hitzone *)list_get(app->hitzones, i);
+		if (rect_contains(zone->rect, pos)) {
+			app->events = add_cevent(app->events, (struct custom_event){
+				.type = 1,
+				.shortcut = zone->event.shortcut,
+				.next = NULL,
+			});
+		}
 	}
-	if (w.we_wordc < 1) {
-		return -1;
-	}
-	const char *bin = w.we_wordv[0];
-	if (!bin || !*bin) {
-		return -1;
-	}
-	if (strchr(bin, '/'))
-		execv(bin, w.we_wordv);
-	else
-		execvp(bin, w.we_wordv);
-	return 0;
 }
 
 bool app_process_events(struct app *app) {
+	app_check_hitzones(app);
 	bool exit = false;
 	struct custom_event *ev = app->events;
 	while (ev != NULL) {
@@ -227,15 +244,18 @@ bool app_process_events(struct app *app) {
 		case 1:
 			run_cmd(ev->shortcut->command);	
 			exit = true;
+			break;
 		case 2:
 			if (app->shortcut_first != NULL) {
 				run_cmd(app->shortcut_first->command);
 				exit = true;
 			}
+			break;
 		}
 		ev = ev->next;
 	}
 	free_cevent(app->events, true);
+	app->events = NULL;
 	return exit;
 }
 
