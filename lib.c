@@ -61,7 +61,6 @@ struct app *app_new() {
 	app->svg_restart = load_svg(KDATA_DIR "reboot.svg");
 	app->svg_search = load_svg(KDATA_DIR "search.svg");
 	app->svg_sleep = load_svg(KDATA_DIR "sleep-mode.svg");
-	app->svg_wifi_full = load_svg(KDATA_DIR "wifi-full.svg");
 	app->images = map_new(1024);
 	// TODO get fallback if env_home is empty, also properly check string size
     //char *env_home = getenv("HOME");
@@ -98,7 +97,6 @@ void app_free(struct app *app) {
 	FREE_SVG(power_off);
 	FREE_SVG(search);
 	FREE_SVG(sleep);
-	FREE_SVG(wifi_full);
 	// TODO free map images
 	// TODO free shortcuts
 	free(app->fmt_time);

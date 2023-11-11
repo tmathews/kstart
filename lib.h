@@ -53,11 +53,6 @@ struct app {
 	RsvgHandle *svg_restart;
 	RsvgHandle *svg_search;
 	RsvgHandle *svg_sleep;
-	RsvgHandle *svg_wifi_full;
-	RsvgHandle *svg_wifi_nosig;
-	RsvgHandle *svg_wifi_off;
-	RsvgHandle *svg_wifi_ok;
-	RsvgHandle *svg_wifi_weak;
 	struct map *images;
 	char search_str[2048];
 	float battery_percent;
