@@ -1,4 +1,5 @@
-#define _POSIX_C_SOURCE 200112L
+//#define _POSIX_C_SOURCE 200112L
+#include <iwlib.h>
 #include <cairo/cairo.h>
 #include <librsvg/rsvg.h>
 #include <wordexp.h>
@@ -17,6 +18,7 @@ void on_draw(struct surface_state *, unsigned char *);
 void on_keyboard(uint32_t, xkb_keysym_t, const char *); 
 void on_key_repeat(xkb_keysym_t);
 void update_power(struct app *);
+void update_wifi(struct app *);
 
 struct app *app;
 bool running = true;
@@ -32,6 +34,7 @@ int main(int argc, char *argv[]) {
 
 	app = app_new();
 	update_power(app);
+	update_wifi(app);
 
    	struct client_state *state = client_state_new();
 	state->on_keyboard = on_keyboard;
@@ -66,6 +69,7 @@ int main(int argc, char *argv[]) {
 		}
 		if (tick > 180) {
 			update_power(app);
+			update_wifi(app);
 			tick = 0;
 		}
 		tick++;
@@ -174,6 +178,21 @@ void draw(struct surface_state *state, cairo_t *cr) {
 	});
 }
 
+int signal_to_radius(int8_t sig) {
+	// top end = -80, low end = -40
+	// mimimum = 3, max = 16
+	int high = 80;
+	int low = 30;
+	int val = (int)sig * -1;
+	float x = 1.0 - ((float)(val - low) / (float)(high - low));
+	int radius = (int)(x * 13);
+	if (radius > 13)
+		radius = 13;
+	if (radius < 0)
+		radius = 0;
+	return 3 + radius;
+}
+
 void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	char str[100];
 	double offset, x, spacing, icon_size;
@@ -187,9 +206,43 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 		.y = bounds.y + 30
 	});
 	// Draw Wifi
-	draw_svg_square(cr, app->svg_wifi_full, x, 16, icon_size);
-	x += icon_size + 8;
-	offset = draw_text(cr, "N/I", x, 30);
+	cairo_save(cr);
+	cairo_translate(cr, x, 24);
+	cairo_set_source_rgb(cr, .2, .2, .2);
+	cairo_new_sub_path(cr);
+	int radius = 16;
+	cairo_arc(cr, 8, 8, radius, -0.75*M_PI, -0.25*M_PI);
+	cairo_line_to(cr, 8, 8);
+	cairo_close_path(cr);
+	if (app->wifi_found) {
+		cairo_fill(cr);
+	} else {
+		cairo_stroke(cr);
+	}
+	cairo_restore(cr);
+	// Draw wifi range
+	if (app->wifi_found) {
+		cairo_save(cr);
+		cairo_translate(cr, x, 24);
+		cairo_set_source_rgb(cr, 1., 1., 1.);
+		cairo_new_sub_path(cr);
+		radius = signal_to_radius(app->wifi_signal);
+		cairo_arc(cr, 8, 8, radius, -0.75*M_PI, -0.25*M_PI);
+		cairo_line_to(cr, 8, 8);
+		cairo_close_path(cr);
+		cairo_fill(cr);
+		cairo_restore(cr);
+	}
+	if (app->wifi_found) {
+		//draw_svg_square(cr, app->svg_wifi_full, x, 16, icon_size);
+		x += icon_size + 8;
+		sprintf(str, "%ddBm", app->wifi_signal);
+		offset = draw_text(cr, str, x, 30);
+	} else {
+		//draw_svg_square(cr, app->svg_wifi_na, x, 16, icon_size);
+		x += icon_size + 8;
+		offset = draw_text(cr, "N/A", x, 30);
+	}
 	// Draw Battery
 	x += offset + spacing;
 	draw_svg_square(cr, app->svg_battery, x, 16, icon_size);
@@ -351,4 +404,23 @@ void update_power(struct app *app) {
 	if (total != 0) {
 		app->battery_percent = (float)sum / (float)total;
 	}
+}
+
+void update_wifi(struct app *app) {
+	app->wifi_found = false;
+	iwrange range;
+	char *device = "wlan0"; // TODO select first active wlan device
+	int sock = iw_sockets_open();
+	if (sock == -1 || iw_get_range_info(sock, device, &range) < 0) {
+		return;
+	}
+	iwstats stats;
+	wireless_config wc;
+	if (iw_get_basic_config(sock, device, &wc) == 0) {
+		app->wifi_found = true;
+		strcpy(app->wifi_ssid, wc.essid); // TODO copy ssid str by max len...
+		iw_get_stats(sock, device, &stats, &range, true);
+		app->wifi_signal = (int8_t)stats.qual.level;
+	}
+	iw_sockets_close(sock);
 }

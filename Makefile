@@ -7,7 +7,7 @@ build: protocol
 		map/list.c \
 		sys/power.c \
 		waywrap/*.c \
-		-lwayland-client -lwayland-cursor -lrt -lxkbcommon -lcairo \
+		-lwayland-client -lwayland-cursor -lrt -lxkbcommon -lcairo -liw \
 		-lm $(FLAGS)
 
 protocol:

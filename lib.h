@@ -62,6 +62,9 @@ struct app {
 	char search_str[2048];
 	float battery_percent;
 	bool battery_charging;
+	bool wifi_found;
+	int8_t wifi_signal;
+	char wifi_ssid[512];
 };
 
 struct app *app_new();
