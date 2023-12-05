@@ -9,6 +9,12 @@
 #define FREE_SVG(NAME) if (app->svg_##NAME != NULL)\
 	g_object_unref(app->svg_##NAME);
 
+enum EV_TYPE {
+	EV_RUN,
+	EV_SHORTCUT,
+	EV_BUILTIN_OPT,
+};
+
 struct shortcut {
 	char *name;
 	char *command;
@@ -21,14 +27,17 @@ struct inputs {
 	struct point pos;
 	bool pressed, released;
 	uint32_t last;
+	int32_t scroll;
+	int32_t scroll_scan;
 };
 
 struct custom_event {
-	int type;
+	enum EV_TYPE type;
 	struct custom_event *next;
 	
 	// TODO unionize custom_event
 	struct shortcut *shortcut;
+	int option_type;
 };
 
 struct hitzone {
@@ -60,6 +69,7 @@ struct app {
 	bool wifi_found;
 	int8_t wifi_signal;
 	char wifi_ssid[512];
+	int page, page_max;
 };
 
 struct app *app_new();

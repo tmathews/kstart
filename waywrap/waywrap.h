@@ -29,18 +29,20 @@ enum pointer_event_mask {
 	POINTER_EVENT_AXIS_DISCRETE = 1 << 7,
 };
 
+struct axe {
+	bool valid;
+	wl_fixed_t value;
+	int32_t discrete;
+};
+
 struct pointer_event {
 	uint32_t event_mask;
 	wl_fixed_t surface_x, surface_y;
 	uint32_t button, state;
 	uint32_t time;
 	uint32_t serial;
-	struct {
-		bool valid;
-		wl_fixed_t value;
-		int32_t discrete;
-	} axes[2];
 	uint32_t axis_source;
+	struct axe axes[2];
 };
 
 struct client_state {

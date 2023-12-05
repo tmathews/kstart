@@ -70,8 +70,11 @@ struct app *app_new() {
 	printf("HOME: %s\n", homepath);
 	app->shortcut_head = read_shortcuts(homepath);
 	app->shortcut_first = NULL;
+	app->page = 0;
+	app->page_max = 0;
 
 	// Load all images :)
+	int count = 0;
 	struct shortcut *scp = app->shortcut_head;
 	for (;scp != NULL; scp = scp->next) {
 		if (scp->icon_filename == NULL)
@@ -85,6 +88,11 @@ struct app *app_new() {
 		if (image != NULL) {
 			map_set(app->images, url, image);
 		}
+		count++;
+	}
+	app->page_max = count / 15;
+	if (app->page_max <= 0) {
+		app->page_max = 1;
 	}
 
 	return app;
@@ -215,6 +223,38 @@ void app_process_inputs(struct app *app) {
 		i->pos.x = wl_fixed_to_int(pe.surface_x);
 		i->pos.y = wl_fixed_to_int(pe.surface_y);
 	}
+	i->scroll = 0;
+	if (pe.event_mask&POINTER_EVENT_AXIS) {
+		struct axe axe = pe.axes[0];
+		//printf("axis! discrete: %d value: %d\n", axe.discrete, axe.value);
+		if (axe.valid == true) {
+			//printf("scroll: %d\n", pe.axes[0].discrete);
+			if (axe.discrete != 0) {
+				i->scroll = axe.discrete;
+				i->scroll_scan = 0;
+			} else {
+				i->scroll_scan += axe.value;
+				int32_t limit = 5000;
+				if (i->scroll_scan > limit || i->scroll_scan < -limit) {
+					i->scroll += i->scroll_scan / limit;
+					i->scroll_scan = 0;
+				}
+			}
+		}
+	} else if (pe.event_mask != 0) {
+		i->scroll_scan = 0;
+	}
+
+	// TEMP HAX FOR SCROLL CHECK
+	if (i->scroll != 0) {
+		app->page += i->scroll;
+		if (app->page < 0) {
+			app->page = 0;
+		} else if (app->page >= app->page_max) {
+			app->page = app->page_max;
+		}
+		//printf("PAGE %d\n", app->page);
+	}
 }
 
 void app_check_hitzones(struct app *app) {
@@ -224,9 +264,11 @@ void app_check_hitzones(struct app *app) {
 	for (int i = 0; i < app->hitzones->length; i++) {
 		struct hitzone *zone = (struct hitzone *)list_get(app->hitzones, i);
 		if (rect_contains(zone->rect, pos)) {
+			// TODO this seems dumb - perhaps clone it or reuse the memory
 			app->events = add_cevent(app->events, (struct custom_event){
-				.type = 1,
+				.type = zone->event.type,
 				.shortcut = zone->event.shortcut,
+				.option_type = zone->event.option_type,
 				.next = NULL,
 			});
 		}
@@ -239,16 +281,31 @@ bool app_process_events(struct app *app) {
 	struct custom_event *ev = app->events;
 	while (ev != NULL) {
 		switch (ev->type) {
-		case 1:
+		case EV_SHORTCUT:
 			run_cmd(ev->shortcut->command);	
 			exit = true;
 			break;
-		case 2:
+		case EV_RUN:
 			if (app->shortcut_first != NULL) {
 				run_cmd(app->shortcut_first->command);
 				exit = true;
 			}
 			break;
+		case EV_BUILTIN_OPT:
+			//printf("GOT BUILT IN OPTION %d\n", ev->option_type);
+			// TODO these should be configurable or plug into actual system API
+			switch (ev->option_type) {
+			case 0: // shutdown
+				run_cmd("shutdown 0");
+				break;
+			case 1: // reboot
+				run_cmd("reboot");
+				break;
+			case 2: // sleep
+				run_cmd("systemctl suspend");
+				break;
+			}
+			exit = true;
 		}
 		ev = ev->next;
 	}

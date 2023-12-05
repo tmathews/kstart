@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 
 	struct surface_state *a;
 	int width = 600;
-	int height = 400;
+	int height = 440;
 	int tick = 0;
     a = surface_state_new(state, "Kallos Start Menu", width, height);
 	a->on_draw = on_draw;
@@ -110,13 +110,14 @@ void on_keyboard(uint32_t state, xkb_keysym_t sym, const char *utf8) {
 		} else if (sym == XKB_KEY_Return) {
 			if (strlen(app->search_str) > 0 && app->shortcut_first != NULL) {
 				app->events = add_cevent(app->events, (struct custom_event){
-					.type = 2,
+					.type = EV_RUN,
 					.next = NULL,
 				});
 			}
 		} else if (is_valid_char(utf8)) {
 			//printf("char '%s'\n", utf8);
 			strcat(app->search_str, utf8);
+			app->page = 0;
 		}
 	} else {
 		keyhold_root = keyhold_remove(keyhold_root, sym);
@@ -168,7 +169,7 @@ void draw(struct surface_state *state, cairo_t *cr) {
 		.x = 20,
 		.y = 112,
 		.width = w - 40,
-		.height = h - 80 - 112,
+		.height = h - 80 - 112 - 30,
 	});
 	draw_options(cr, app, (struct rect){
 		.x = 20,
@@ -303,9 +304,16 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 	app->shortcut_first = NULL;
 	struct rect zone;
 	struct shortcut *scp = app->shortcut_head;
+	int count, first, last = 0;
+	first = app->page * 15;
+	last = first + 15;
 	for (;scp != NULL; scp = scp->next) {
 		if (!shortcut_matches(scp, app->search_str))
 			continue;
+		if (count < first || count >= last) {
+			count++;
+			continue;
+		}
 		if (app->shortcut_first == NULL)
 			app->shortcut_first = scp;
 		struct shortcut sc = *scp;
@@ -315,25 +323,18 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 		struct hitzone *hzone = malloc(sizeof(struct hitzone));
 		hzone->rect = zone;
 		hzone->event = (struct custom_event){
-			.type = 1,
+			.type = EV_SHORTCUT,
 			.shortcut = scp,
 		};
 		list_append(app->hitzones, hzone);
-		if (app->input.active && rect_contains(zone, app->input.pos)) { // is selected index OR pointer in area
+		if (app->input.active && rect_contains(zone, app->input.pos)) { 
+			// is selected index OR pointer in area
 			cairo_save(cr);
 			path_rounded_rect(cr, x, y, column_width, row_height, 5.0);
 			cairo_set_source_rgba(cr, clr.r, clr.g, clr.b, 0.2);
 			cairo_set_line_width(cr, 0.0);
 			cairo_fill(cr);
 			cairo_restore(cr);
-			//if (app->input.released) {
-				//printf("got trigger\n");
-				//app->events = add_cevent(app->events, (struct custom_event){
-				//	.type = 1,
-				//	.shortcut = scp,
-				//	.next = NULL,
-				//});
-			//}
 		}
 		// Draw icon
 		if (sc.icon_filename != NULL) {
@@ -358,6 +359,7 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 		} else {
 			x += column_width;
 		}
+		count++;
 	}
 }
 
@@ -366,19 +368,53 @@ void draw_options(cairo_t *cr, struct app *app, struct rect bounds) {
 	// We draw from right to left
 	spacing = 15;
 	icon_size = 24;
-	x = bounds.x + bounds.width - icon_size;
+	x = bounds.x + bounds.width - icon_size - 10;
 	y = bounds.y + bounds.height - icon_size;
 
-	RsvgHandle *icons[4] = {
+	RsvgHandle *icons[3] = {
 		app->svg_power_off,
 		app->svg_restart,
 		app->svg_sleep,
-		app->svg_exit,
+		//app->svg_exit,
 	};
-	for (int i = 0; i < 4; i++) {
+	
+	struct rect rect;
+	int padding = 5;
+	for (int i = 0; i < 3; i++) {
+		rect = (struct rect){
+			.x = x, .y = y,
+			.width = icon_size, .height = icon_size,
+		};
+		// draw background circle highlight
+		if (rect_contains(rect, app->input.pos)) {
+			cairo_save(cr);
+			path_rounded_rect(cr, rect.x-padding, rect.y-padding, 
+					rect.width+padding*2, rect.height+padding*2, 3);
+			cairo_set_source_rgb(cr, 0.2, 0.2, 0.2);
+			cairo_fill_preserve(cr);
+			cairo_stroke(cr);
+			cairo_restore(cr);
+		}
 		draw_svg_square(cr, icons[i], x, y, icon_size);
+		
+		struct hitzone *hzone = malloc(sizeof(struct hitzone));
+		hzone->rect = rect;
+		hzone->event = (struct custom_event){
+			.type = EV_BUILTIN_OPT,
+			.option_type = i,
+		};
+		list_append(app->hitzones, hzone);
+
 		x -= spacing + icon_size;
 	}
+	// Draw page count
+	char str[100];
+	sprintf(str, "Page %d/%d", app->page + 1, app->page_max+1);
+	cairo_select_font_face(cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, 
+		CAIRO_FONT_WEIGHT_BOLD);
+	cairo_set_font_size(cr, 14);
+	cairo_set_source_rgb(cr, 1, 1, 1);
+	draw_text(cr, str, bounds.x+10, bounds.y+bounds.height-6);
 }
 
 void update_power(struct app *app) {
