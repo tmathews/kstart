@@ -58,6 +58,7 @@ struct app {
 	RsvgHandle *svg_bluetooth;
 	RsvgHandle *svg_bluetooth_off;
 	RsvgHandle *svg_exit;
+	RsvgHandle *svg_lock;
 	RsvgHandle *svg_power_off;
 	RsvgHandle *svg_restart;
 	RsvgHandle *svg_search;

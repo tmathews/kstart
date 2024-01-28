@@ -109,7 +109,8 @@ void client_state_destroy(struct client_state *state) {
 		surface_state_destroy(next);
 		next = tmp;
 	}
-	wl_display_dispatch(state->wl_display);
+	// TODO figure out if we should be calling wl_display_dispatch in distroying the client state
+	//wl_display_dispatch(state->wl_display);
 	free(state);
 }
 

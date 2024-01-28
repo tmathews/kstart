@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <wordexp.h>
+#include <pthread.h>
 #include "lib.h"
 
 bool is_valid_char(const char *str) {
@@ -40,6 +41,24 @@ int run_cmd(const char *str) {
 	return 0;
 }
 
+void *load_images(void *args) {
+	struct app *app = (struct app *)args;
+	struct shortcut *scp = app->shortcut_head;
+	for (;scp != NULL; scp = scp->next) {
+		if (scp->icon_filename == NULL)
+			continue;
+		char *url = scp->icon_filename;
+		cairo_surface_t *image = (cairo_surface_t *)map_get(app->images, url);
+		if (image != NULL)
+			continue;
+		// TODO load SVG if ends in ".svg"
+		image = cairo_image_surface_create_from_png(url);
+		if (image != NULL) {
+			map_set(app->images, url, image);
+		}
+	}
+}
+
 struct app *app_new() {
 	struct app *app = malloc(sizeof(struct app));
 	app->events = NULL;
@@ -56,6 +75,7 @@ struct app *app_new() {
 	// If these icons don't load, don't worry - we won't draw them.	
 	app->svg_battery = load_svg(KDATA_DIR "battery.svg");
 	app->svg_bluetooth = load_svg(KDATA_DIR "bluetooth.svg");
+	app->svg_lock = load_svg(KDATA_DIR "lock.svg");
 	app->svg_exit = load_svg(KDATA_DIR "exit.svg");
 	app->svg_power_off = load_svg(KDATA_DIR "shutdown.svg");
 	app->svg_restart = load_svg(KDATA_DIR "reboot.svg");
@@ -77,23 +97,15 @@ struct app *app_new() {
 	int count = 0;
 	struct shortcut *scp = app->shortcut_head;
 	for (;scp != NULL; scp = scp->next) {
-		if (scp->icon_filename == NULL)
-			continue;
-		char *url = scp->icon_filename;
-		cairo_surface_t *image = (cairo_surface_t *)map_get(app->images, url);
-		if (image != NULL)
-			continue;
-		// TODO load SVG if ends in ".svg"
-		image = cairo_image_surface_create_from_png(url);
-		if (image != NULL) {
-			map_set(app->images, url, image);
-		}
 		count++;
 	}
 	app->page_max = count / 15;
 	if (app->page_max <= 0) {
 		app->page_max = 1;
 	}
+
+	pthread_t tid;
+	pthread_create(&tid, NULL, &load_images, app);
 
 	return app;
 }
@@ -293,7 +305,7 @@ bool app_process_events(struct app *app) {
 			break;
 		case EV_BUILTIN_OPT:
 			//printf("GOT BUILT IN OPTION %d\n", ev->option_type);
-			// TODO these should be configurable or plug into actual system API
+			// TODO these should be configurable in shortcuts file 
 			switch (ev->option_type) {
 			case 0: // shutdown
 				run_cmd("shutdown 0");
@@ -303,6 +315,9 @@ bool app_process_events(struct app *app) {
 				break;
 			case 2: // sleep
 				run_cmd("systemctl suspend");
+				break;
+			case 3: // lock
+				run_cmd("swaylock");
 				break;
 			}
 			exit = true;
