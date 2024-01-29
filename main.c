@@ -232,13 +232,13 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	cairo_close_path(cr);
 	cairo_set_line_width(cr, 1.);
 	cairo_stroke(cr);
+	cairo_restore(cr);
 	// TODO fix wifi_found drawing
 	//if (app->wifi_found) {
 	//	//cairo_fill(cr);
 	//} else {
 	//	cairo_stroke(cr);
 	//}
-	cairo_restore(cr);
 	// Draw wifi range
 	if (app->wifi_found) {
 		cairo_save(cr);
@@ -252,6 +252,7 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 		cairo_fill(cr);
 		cairo_restore(cr);
 	}
+	cairo_save(cr);
 	if (app->wifi_found) {
 		//draw_svg_square(cr, app->svg_wifi_full, x, 16, icon_size);
 		x += icon_size + 8;
@@ -262,22 +263,25 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 		x += icon_size + 8;
 		offset = draw_text(cr, "N/A", x, 30);
 	}
+	cairo_restore(cr);
 	// Draw Battery
+	cairo_save(cr);
 	x += offset + spacing;
 	draw_svg_square(cr, app->svg_battery, x, 16, icon_size);
 	// Draw battery square
 	int fh = (int)(10*(app->battery_percent/100));
 	path_rounded_rect(cr, x+4, 20+(10-fh), 8, fh, 0);
 	cairo_set_source_rgb(cr, 1, 1, 1);
-	cairo_fill_preserve(cr);
+	cairo_fill(cr);
 	x += icon_size + 8;
 	sprintf(str, "%0.0f%%", app->battery_percent);
 	offset = draw_text(cr, str, x, 30);
+	cairo_restore(cr);
 	// Draw Bluetooth
-	x += offset + spacing;
-	draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
-	x += icon_size + 8;
-	draw_text(cr, "N/I", x, 30);
+	//x += offset + spacing;
+	//draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
+	//x += icon_size + 8;
+	//draw_text(cr, "N/I", x, 30);
 }
 
 void draw_search(cairo_t *cr, struct app *app, struct rect box) {
