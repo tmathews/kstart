@@ -317,7 +317,7 @@ bool app_process_events(struct app *app) {
 				run_cmd("systemctl suspend");
 				break;
 			case 3: // lock
-				run_cmd("swaylock");
+				run_cmd("loginctl lock-session");
 				break;
 			}
 			exit = true;
