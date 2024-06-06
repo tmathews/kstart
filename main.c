@@ -3,6 +3,7 @@
 #include <cairo/cairo.h>
 #include <librsvg/rsvg.h>
 #include <wordexp.h>
+#include "audio.h"
 #include "waywrap/waywrap.h"
 #include "sys/power.h"
 #include "keyhold.h"
@@ -65,6 +66,7 @@ int main(int argc, char *argv[]) {
 	
 	bool first = true;
     while (state->root_surface != NULL && running == true) {
+		audio_process(&app->audio);
 		wl_display_dispatch(state->wl_display);
 		keyhold_process(keyhold_root, state->key_repeat_delay, 
 			state->key_repeat_rate, on_key_repeat);
@@ -193,6 +195,14 @@ void draw(struct surface_state *state, cairo_t *cr) {
 	});
 }
 
+int volume_to_radius(float vol) {
+	int radius = vol * 16;
+	if (radius > 16) {
+		radius = 16;
+	}
+	return radius;
+}
+
 int signal_to_radius(int8_t sig) {
 	// top end = -80, low end = -40
 	// mimimum = 3, max = 16
@@ -282,6 +292,41 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	//draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
 	//x += icon_size + 8;
 	//draw_text(cr, "N/I", x, 30);
+	//
+	// Draw Volume
+	x += offset + spacing;
+	//draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
+	{
+		cairo_save(cr);
+		cairo_translate(cr, x, 32);
+		cairo_set_source_rgba(cr, 1., 1., 1., .2);
+		cairo_new_sub_path(cr);
+		cairo_line_to(cr, 0, 0);
+		cairo_line_to(cr, 16, 0);
+		cairo_line_to(cr, 16, -16);
+		cairo_close_path(cr);
+		cairo_fill(cr);
+		cairo_restore(cr);
+	}
+	cairo_save(cr);
+	cairo_translate(cr, x, 32);
+	cairo_set_source_rgba(cr, 1., 1., 1., 1.);
+	cairo_new_sub_path(cr);
+	radius = volume_to_radius(app->audio.volume);
+	//cairo_arc(cr, 8, 8, radius, -0.75*M_PI, -0.25*M_PI);
+	cairo_line_to(cr, 0, 0);
+	cairo_line_to(cr, radius, 0);
+	cairo_line_to(cr, radius, -radius);
+	cairo_close_path(cr);
+	cairo_fill(cr);
+	cairo_restore(cr);
+	x += icon_size+8; //icon_size + 8;
+	if (app->audio.muted) {
+		sprintf(str, "M");
+	} else {
+		sprintf(str, "%0.0f%%", app->audio.volume*100);
+	}
+	draw_text(cr, str, x, 30);
 }
 
 void draw_search(cairo_t *cr, struct app *app, struct rect box) {

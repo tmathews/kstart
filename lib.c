@@ -107,6 +107,8 @@ struct app *app_new() {
 	pthread_t tid;
 	pthread_create(&tid, NULL, &load_images, app);
 
+	audio_init(&app->audio);
+
 	return app;
 }
 
@@ -119,6 +121,7 @@ void app_free(struct app *app) {
 	FREE_SVG(sleep);
 	// TODO free map images
 	// TODO free shortcuts
+	audio_destory(&app->audio);
 	free(app->fmt_time);
 	free(app);
 }

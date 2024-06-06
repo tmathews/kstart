@@ -1,8 +1,8 @@
-FLAGS = $(shell pkg-config --cflags --libs librsvg-2.0)
+FLAGS = $(shell pkg-config --cflags --libs librsvg-2.0 libpulse)
 
 build: protocol
 	cc -g -o kstart \
-		main.c keyhold.c draw.c lib.c \
+		main.c keyhold.c draw.c lib.c audio.c\
 		map/hash.c \
 		map/list.c \
 		sys/power.c \

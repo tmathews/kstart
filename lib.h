@@ -1,4 +1,5 @@
 #include <librsvg/rsvg.h>
+#include "audio.h"
 #include "draw.h"
 #include "map/hash.h"
 #include "map/list.h"
@@ -46,6 +47,7 @@ struct hitzone {
 };
 
 struct app {
+	struct audio audio;
 	struct client_state *state;
 	struct inputs input;
 	struct custom_event *events;
