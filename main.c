@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
 	app = app_new();
 	update_power(app);
 	update_wifi(app);
+	audio_process(&app->audio);
 
 	printf("new client_state\n");
 

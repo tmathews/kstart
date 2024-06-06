@@ -1,15 +1,13 @@
+#include "lib.h"
+#include <pthread.h>
 #include <stdbool.h>
 #include <wordexp.h>
-#include <pthread.h>
-#include "lib.h"
 
-bool is_valid_char(const char *str) {
-	return strlen(str) > 0;
-}
+bool is_valid_char(const char *str) { return strlen(str) > 0; }
 
 RsvgHandle *load_svg(const char *filename) {
 	RsvgHandle *handle = rsvg_handle_new_from_file(filename, NULL);
-	// Set the default DPI, you should set at draw time for the particular 
+	// Set the default DPI, you should set at draw time for the particular
 	// surface.
 	if (handle != NULL)
 		rsvg_handle_set_dpi(handle, 72.0);
@@ -19,13 +17,13 @@ RsvgHandle *load_svg(const char *filename) {
 int run_cmd(const char *str) {
 	wordexp_t w;
 	switch (wordexp(str, &w, WRDE_NOCMD)) {
-		case 0:
-			break;
-		case WRDE_NOSPACE:
-		case WRDE_CMDSUB:
-		case WRDE_BADCHAR:
-		default:
-			return -1;
+	case 0:
+		break;
+	case WRDE_NOSPACE:
+	case WRDE_CMDSUB:
+	case WRDE_BADCHAR:
+	default:
+		return -1;
 	}
 	if (w.we_wordc < 1) {
 		return -1;
@@ -44,7 +42,7 @@ int run_cmd(const char *str) {
 void *load_images(void *args) {
 	struct app *app = (struct app *)args;
 	struct shortcut *scp = app->shortcut_head;
-	for (;scp != NULL; scp = scp->next) {
+	for (; scp != NULL; scp = scp->next) {
 		if (scp->icon_filename == NULL)
 			continue;
 		char *url = scp->icon_filename;
@@ -65,6 +63,8 @@ struct app *app_new() {
 	app->hitzones = list_new();
 	strcpy(app->search_str, "");
 
+	audio_init(&app->audio);
+
 	// TODO read colors from kallos config file: ~/.config/kallos/colors
 	app->clr_main = hex2rgb(0xAB8449);
 	app->clr_bg = hex2rgb(0x100F0D);
@@ -72,7 +72,7 @@ struct app *app_new() {
 	app->fmt_time = malloc(128);
 	strcpy(app->fmt_time, "%B %e, %Y %H:%M:%S");
 
-	// If these icons don't load, don't worry - we won't draw them.	
+	// If these icons don't load, don't worry - we won't draw them.
 	app->svg_battery = load_svg(KDATA_DIR "battery.svg");
 	app->svg_bluetooth = load_svg(KDATA_DIR "bluetooth.svg");
 	app->svg_lock = load_svg(KDATA_DIR "lock.svg");
@@ -83,7 +83,7 @@ struct app *app_new() {
 	app->svg_sleep = load_svg(KDATA_DIR "sleep-mode.svg");
 	app->images = map_new(1024);
 	// TODO get fallback if env_home is empty, also properly check string size
-    //char *env_home = getenv("HOME");
+	// char *env_home = getenv("HOME");
 	char *homepath = malloc(2048);
 	strcpy(homepath, getenv("HOME"));
 	strcat(homepath, "/.config/kallos/shortcuts");
@@ -96,18 +96,17 @@ struct app *app_new() {
 	// Load all images :)
 	int count = 0;
 	struct shortcut *scp = app->shortcut_head;
-	for (;scp != NULL; scp = scp->next) {
+	for (; scp != NULL; scp = scp->next) {
 		count++;
 	}
 	app->page_max = count / 15;
 	if (app->page_max <= 0) {
-		app->page_max = 1;
+		app->page_max = 0;
 	}
+	printf("items %d, page_max: %d\n", count, app->page_max);
 
 	pthread_t tid;
 	pthread_create(&tid, NULL, &load_images, app);
-
-	audio_init(&app->audio);
 
 	return app;
 }
@@ -133,8 +132,8 @@ void datestr(char *str, const char *fmt) {
 }
 
 char *new_str_from(const char *str, int offset, int size) {
-	char *nstr = malloc(size-offset);
-	memcpy(nstr, str+offset, size-offset);
+	char *nstr = malloc(size - offset);
+	memcpy(nstr, str + offset, size - offset);
 	return nstr;
 }
 
@@ -151,7 +150,7 @@ struct shortcut *read_shortcuts(char *filename) {
 	// 	'prop value of prop here' ->> Key "prop" = "value of proper here"
 	// example file:
 	// name Steam
-	// icon /usr/share/icons/hicolor/256x256/apps/steam.png 
+	// icon /usr/share/icons/hicolor/256x256/apps/steam.png
 	// command steam
 	//
 	FILE *fp;
@@ -206,7 +205,7 @@ struct point get_pointer_position(struct app *app) {
 	struct pointer_event pe = *app->state->active_surface_pointer->pointer;
 	p.x = wl_fixed_to_int(pe.surface_x);
 	p.y = wl_fixed_to_int(pe.surface_y);
-	//printf("%d %d\n", p.x, p.y);
+	// printf("%d %d\n", p.x, p.y);
 	return p;
 }
 
@@ -223,7 +222,7 @@ void app_process_inputs(struct app *app) {
 	}
 	i->active = true;
 	i->last = pe.time;
-	if (pe.event_mask&POINTER_EVENT_BUTTON) {
+	if (pe.event_mask & POINTER_EVENT_BUTTON) {
 		if (pe.button == 272) {
 			printf("pe event\n");
 			bool was_pressed = i->pressed;
@@ -234,16 +233,16 @@ void app_process_inputs(struct app *app) {
 			}
 		}
 	}
-	if (pe.event_mask&POINTER_EVENT_MOTION) {
+	if (pe.event_mask & POINTER_EVENT_MOTION) {
 		i->pos.x = wl_fixed_to_int(pe.surface_x);
 		i->pos.y = wl_fixed_to_int(pe.surface_y);
 	}
 	i->scroll = 0;
-	if (pe.event_mask&POINTER_EVENT_AXIS) {
+	if (pe.event_mask & POINTER_EVENT_AXIS) {
 		struct axe axe = pe.axes[0];
-		//printf("axis! discrete: %d value: %d\n", axe.discrete, axe.value);
+		// printf("axis! discrete: %d value: %d\n", axe.discrete, axe.value);
 		if (axe.valid == true) {
-			//printf("scroll: %d\n", pe.axes[0].discrete);
+			// printf("scroll: %d\n", pe.axes[0].discrete);
 			if (axe.discrete != 0) {
 				i->scroll = axe.discrete;
 				i->scroll_scan = 0;
@@ -268,7 +267,7 @@ void app_process_inputs(struct app *app) {
 		} else if (app->page >= app->page_max) {
 			app->page = app->page_max;
 		}
-		//printf("PAGE %d\n", app->page);
+		// printf("PAGE %d\n", app->page);
 	}
 }
 
@@ -280,12 +279,15 @@ void app_check_hitzones(struct app *app) {
 		struct hitzone *zone = (struct hitzone *)list_get(app->hitzones, i);
 		if (rect_contains(zone->rect, pos)) {
 			// TODO this seems dumb - perhaps clone it or reuse the memory
-			app->events = add_cevent(app->events, (struct custom_event){
-				.type = zone->event.type,
-				.shortcut = zone->event.shortcut,
-				.option_type = zone->event.option_type,
-				.next = NULL,
-			});
+			app->events = add_cevent(
+				app->events,
+				(struct custom_event){
+					.type = zone->event.type,
+					.shortcut = zone->event.shortcut,
+					.option_type = zone->event.option_type,
+					.next = NULL,
+				}
+			);
 		}
 	}
 }
@@ -297,7 +299,7 @@ bool app_process_events(struct app *app) {
 	while (ev != NULL) {
 		switch (ev->type) {
 		case EV_SHORTCUT:
-			run_cmd(ev->shortcut->command);	
+			run_cmd(ev->shortcut->command);
 			exit = true;
 			break;
 		case EV_RUN:
@@ -307,8 +309,8 @@ bool app_process_events(struct app *app) {
 			}
 			break;
 		case EV_BUILTIN_OPT:
-			//printf("GOT BUILT IN OPTION %d\n", ev->option_type);
-			// TODO these should be configurable in shortcuts file 
+			// printf("GOT BUILT IN OPTION %d\n", ev->option_type);
+			//  TODO these should be configurable in shortcuts file
 			switch (ev->option_type) {
 			case 0: // shutdown
 				run_cmd("shutdown 0");
@@ -333,14 +335,15 @@ bool app_process_events(struct app *app) {
 }
 
 bool rect_contains(struct rect rect, struct point pos) {
-	if (pos.x >= rect.x && pos.x < rect.x + rect.width &&
-		pos.y >= rect.y && pos.y < rect.y + rect.height) {
+	if (pos.x >= rect.x && pos.x < rect.x + rect.width && pos.y >= rect.y &&
+		pos.y < rect.y + rect.height) {
 		return true;
 	}
 	return false;
 }
 
-struct custom_event *add_cevent(struct custom_event *head, struct custom_event new) {
+struct custom_event *
+add_cevent(struct custom_event *head, struct custom_event new) {
 	struct custom_event *ev = malloc(sizeof(struct custom_event));
 	*ev = new;
 	if (head == NULL) {
