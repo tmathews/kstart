@@ -1,14 +1,14 @@
-//#define _POSIX_C_SOURCE 200112L
-#include <iwlib.h>
+// #define _POSIX_C_SOURCE 200112L
+#include "audio.h"
+#include "draw.h"
+#include "keyhold.h"
+#include "lib.h"
+#include "sys/power.h"
+#include "waywrap/waywrap.h"
 #include <cairo/cairo.h>
+#include <iwlib.h>
 #include <librsvg/rsvg.h>
 #include <wordexp.h>
-#include "audio.h"
-#include "waywrap/waywrap.h"
-#include "sys/power.h"
-#include "keyhold.h"
-#include "draw.h"
-#include "lib.h"
 
 void draw(struct surface_state *, cairo_t *);
 void draw_status(cairo_t *, struct app *, struct rect);
@@ -16,7 +16,7 @@ void draw_search(cairo_t *, struct app *, struct rect);
 void draw_apps(cairo_t *, struct app *, struct rect);
 void draw_options(cairo_t *, struct app *, struct rect);
 void on_draw(struct surface_state *, unsigned char *);
-void on_keyboard(uint32_t, xkb_keysym_t, const char *); 
+void on_keyboard(uint32_t, xkb_keysym_t, const char *);
 void on_key_repeat(xkb_keysym_t);
 void update_power(struct app *);
 void update_wifi(struct app *);
@@ -32,15 +32,15 @@ cairo_surface_t *surf;
 int main(int argc, char *argv[]) {
 	clr_placeholder = hex2rgb(0x999999);
 	clr_text = hex2rgb(0x313131);
-	
+
 	printf("new kstart\n");
 
 	app = app_new();
 	update_power(app);
 	update_wifi(app);
-   	
+
 	printf("new client_state\n");
-	
+
 	struct client_state *state = client_state_new();
 	state->on_keyboard = on_keyboard;
 	app->state = state;
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
 	int width = 600;
 	int height = 440;
 	int tick = 0;
-    a = surface_state_new(state, "Kallos Start Menu", width, height);
+	a = surface_state_new(state, "Kallos Start Menu", width, height);
 	a->on_draw = on_draw;
 
 	printf("setting decos \n");
@@ -63,15 +63,17 @@ int main(int argc, char *argv[]) {
 	zxdg_toplevel_decoration_v1_set_mode(a->decos, 1);
 
 	printf("now run\n");
-	
+
 	bool first = true;
-    while (state->root_surface != NULL && running == true) {
+	while (state->root_surface != NULL && running == true) {
 		audio_process(&app->audio);
 		wl_display_dispatch(state->wl_display);
-		keyhold_process(keyhold_root, state->key_repeat_delay, 
-			state->key_repeat_rate, on_key_repeat);
+		keyhold_process(
+			keyhold_root, state->key_repeat_delay, state->key_repeat_rate,
+			on_key_repeat
+		);
 		// If there is no active input let's bounce out of here!
-		//if (!first && state->active_surface_pointer == NULL && 
+		// if (!first && state->active_surface_pointer == NULL &&
 		//	state->active_surface_keyboard == NULL) {
 		//	running = false;
 		//}
@@ -89,12 +91,13 @@ int main(int argc, char *argv[]) {
 	}
 	client_state_destroy(state);
 	app_free(app);
-    return 0;
+	return 0;
 }
 
 void on_draw(struct surface_state *state, unsigned char *data) {
-	cairo_surface_t *csurf = cairo_image_surface_create_for_data(data,
-		CAIRO_FORMAT_ARGB32, state->width, state->height, state->width * 4);
+	cairo_surface_t *csurf = cairo_image_surface_create_for_data(
+		data, CAIRO_FORMAT_ARGB32, state->width, state->height, state->width * 4
+	);
 	cairo_t *cr = cairo_create(csurf);
 	draw(state, cr);
 	cairo_surface_flush(csurf);
@@ -103,9 +106,9 @@ void on_draw(struct surface_state *state, unsigned char *data) {
 }
 
 void on_key_repeat(xkb_keysym_t sym) {
-	//printf("got key repeat! %d\n", sym);
+	// printf("got key repeat! %d\n", sym);
 	if (sym == XKB_KEY_BackSpace) {
-		app->search_str[strlen(app->search_str)-1] = '\0';
+		app->search_str[strlen(app->search_str) - 1] = '\0';
 	}
 }
 
@@ -114,20 +117,23 @@ void on_keyboard(uint32_t state, xkb_keysym_t sym, const char *utf8) {
 		keyhold_root = keyhold_add(keyhold_root, sym);
 		if (sym == XKB_KEY_BackSpace) {
 			int len = strlen(app->search_str);
-			app->search_str[len-1] = '\0';
+			app->search_str[len - 1] = '\0';
 		} else if (sym == XKB_KEY_Escape) {
 			running = false;
 			app->search_str[0] = '\0';
 			printf("quit application!\n");
 		} else if (sym == XKB_KEY_Return) {
 			if (strlen(app->search_str) > 0 && app->shortcut_first != NULL) {
-				app->events = add_cevent(app->events, (struct custom_event){
-					.type = EV_RUN,
-					.next = NULL,
-				});
+				app->events = add_cevent(
+					app->events,
+					(struct custom_event){
+						.type = EV_RUN,
+						.next = NULL,
+					}
+				);
 			}
 		} else if (is_valid_char(utf8)) {
-			//printf("char '%s'\n", utf8);
+			// printf("char '%s'\n", utf8);
 			strcat(app->search_str, utf8);
 			app->page = 0;
 		}
@@ -141,10 +147,10 @@ void draw(struct surface_state *state, cairo_t *cr) {
 	list_empty(app->hitzones);
 
 	struct color clr_main, clr_bg;
-	
+
 	int w = state->width;
 	int h = state->height;
-	
+
 	clr_main = app->clr_main;
 	clr_bg = app->clr_bg;
 
@@ -152,47 +158,60 @@ void draw(struct surface_state *state, cairo_t *cr) {
 	path_rounded_rect(cr, 0, 0, w, h, 0);
 	cairo_set_source_rgba(cr, clr_bg.r, clr_bg.g, clr_bg.b, 0.45);
 	cairo_fill(cr);
-	//cairo_set_source_rgb(cr, clr_main.r, clr_main.g, clr_main.b);
-	//path_rounded_rect(cr, 1.5, 1.5, w-4, h-4, 2);
-	//cairo_set_source_rgb(cr, clr_bg.r, clr_bg.g, clr_bg.b);
-	//cairo_fill_preserve(cr);
-	//cairo_set_source_rgb(cr, clr_main.r, clr_main.g, clr_main.b);
-	//cairo_set_line_width(cr, 1.0);
-	//cairo_stroke(cr);
+	// cairo_set_source_rgb(cr, clr_main.r, clr_main.g, clr_main.b);
+	// path_rounded_rect(cr, 1.5, 1.5, w-4, h-4, 2);
+	// cairo_set_source_rgb(cr, clr_bg.r, clr_bg.g, clr_bg.b);
+	// cairo_fill_preserve(cr);
+	// cairo_set_source_rgb(cr, clr_main.r, clr_main.g, clr_main.b);
+	// cairo_set_line_width(cr, 1.0);
+	// cairo_stroke(cr);
 
 	// Set our font for the status section
 	cairo_set_source_rgb(cr, 1, 1, 1);
-	cairo_select_font_face(cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, 
-		CAIRO_FONT_WEIGHT_BOLD);
+	cairo_select_font_face(
+		cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD
+	);
 	cairo_set_font_size(cr, 14);
 
 	// Draw our status and date indicators
-	draw_status(cr, app, (struct rect){
-		.x = 0,
-		.y = 0,
-		.width = w,
-		.height = h,
-	});	
+	draw_status(
+		cr, app,
+		(struct rect){
+			.x = 0,
+			.y = 0,
+			.width = w,
+			.height = h,
+		}
+	);
 
 	// Draw application search bar
-	draw_search(cr, app, (struct rect){
-		.x = 20, 
-		.y = 50,
-		.width = w - 40, 
-		.height = 36, 
-	});
-	draw_apps(cr, app, (struct rect){
-		.x = 20,
-		.y = 112,
-		.width = w - 40,
-		.height = h - 80 - 112 - 30,
-	});
-	draw_options(cr, app, (struct rect){
-		.x = 20,
-		.y = h - 20 - 60,
-		.width = w - 40,
-		.height = 60, 
-	});
+	draw_search(
+		cr, app,
+		(struct rect){
+			.x = 20,
+			.y = 50,
+			.width = w - 40,
+			.height = 36,
+		}
+	);
+	draw_apps(
+		cr, app,
+		(struct rect){
+			.x = 20,
+			.y = 112,
+			.width = w - 40,
+			.height = h - 80 - 112 - 30,
+		}
+	);
+	draw_options(
+		cr, app,
+		(struct rect){
+			.x = 20,
+			.y = h - 20 - 60,
+			.width = w - 40,
+			.height = 60,
+		}
+	);
 }
 
 int volume_to_radius(float vol) {
@@ -226,25 +245,24 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	icon_size = 16;
 	// Draw Date
 	datestr(str, app->fmt_time);
-	draw_text_rtl(cr, str, (struct point){
-		.x = bounds.width - 20, 
-		.y = bounds.y + 30
-	});
+	draw_text_rtl(
+		cr, str, (struct point){.x = bounds.width - 20, .y = bounds.y + 30}
+	);
 	// Draw Wifi
 	cairo_save(cr);
 	cairo_translate(cr, x, 24);
-	//cairo_set_source_rgba(cr, .2, .2, .2, 0.1);
+	// cairo_set_source_rgba(cr, .2, .2, .2, 0.1);
 	cairo_set_source_rgba(cr, 1., 1., 1., 0.2);
 	cairo_new_sub_path(cr);
 	int radius = 16;
-	cairo_arc(cr, 8, 8, radius, -0.75*M_PI, -0.25*M_PI);
+	cairo_arc(cr, 8, 8, radius, -0.75 * M_PI, -0.25 * M_PI);
 	cairo_line_to(cr, 8, 8);
 	cairo_close_path(cr);
 	cairo_set_line_width(cr, 1.);
 	cairo_stroke(cr);
 	cairo_restore(cr);
 	// TODO fix wifi_found drawing
-	//if (app->wifi_found) {
+	// if (app->wifi_found) {
 	//	//cairo_fill(cr);
 	//} else {
 	//	cairo_stroke(cr);
@@ -256,7 +274,7 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 		cairo_set_source_rgba(cr, 1., 1., 1., 1.);
 		cairo_new_sub_path(cr);
 		radius = signal_to_radius(app->wifi_signal);
-		cairo_arc(cr, 8, 8, radius, -0.75*M_PI, -0.25*M_PI);
+		cairo_arc(cr, 8, 8, radius, -0.75 * M_PI, -0.25 * M_PI);
 		cairo_line_to(cr, 8, 8);
 		cairo_close_path(cr);
 		cairo_fill(cr);
@@ -264,12 +282,12 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	}
 	cairo_save(cr);
 	if (app->wifi_found) {
-		//draw_svg_square(cr, app->svg_wifi_full, x, 16, icon_size);
+		// draw_svg_square(cr, app->svg_wifi_full, x, 16, icon_size);
 		x += icon_size + 8;
 		sprintf(str, "%ddBm", app->wifi_signal);
 		offset = draw_text(cr, str, x, 30);
 	} else {
-		//draw_svg_square(cr, app->svg_wifi_na, x, 16, icon_size);
+		// draw_svg_square(cr, app->svg_wifi_na, x, 16, icon_size);
 		x += icon_size + 8;
 		offset = draw_text(cr, "N/A", x, 30);
 	}
@@ -279,8 +297,8 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	x += offset + spacing;
 	draw_svg_square(cr, app->svg_battery, x, 16, icon_size);
 	// Draw battery square
-	int fh = (int)(10*(app->battery_percent/100));
-	path_rounded_rect(cr, x+4, 20+(10-fh), 8, fh, 0);
+	int fh = (int)(10 * (app->battery_percent / 100));
+	path_rounded_rect(cr, x + 4, 20 + (10 - fh), 8, fh, 0);
 	cairo_set_source_rgb(cr, 1, 1, 1);
 	cairo_fill(cr);
 	x += icon_size + 8;
@@ -288,14 +306,14 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	offset = draw_text(cr, str, x, 30);
 	cairo_restore(cr);
 	// Draw Bluetooth
-	//x += offset + spacing;
-	//draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
-	//x += icon_size + 8;
-	//draw_text(cr, "N/I", x, 30);
+	// x += offset + spacing;
+	// draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
+	// x += icon_size + 8;
+	// draw_text(cr, "N/I", x, 30);
 	//
 	// Draw Volume
 	x += offset + spacing;
-	//draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
+	// draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
 	{
 		cairo_save(cr);
 		cairo_translate(cr, x, 32);
@@ -313,18 +331,18 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	cairo_set_source_rgba(cr, 1., 1., 1., 1.);
 	cairo_new_sub_path(cr);
 	radius = volume_to_radius(app->audio.volume);
-	//cairo_arc(cr, 8, 8, radius, -0.75*M_PI, -0.25*M_PI);
+	// cairo_arc(cr, 8, 8, radius, -0.75*M_PI, -0.25*M_PI);
 	cairo_line_to(cr, 0, 0);
 	cairo_line_to(cr, radius, 0);
 	cairo_line_to(cr, radius, -radius);
 	cairo_close_path(cr);
 	cairo_fill(cr);
 	cairo_restore(cr);
-	x += icon_size+8; //icon_size + 8;
+	x += icon_size + 8; // icon_size + 8;
 	if (app->audio.muted) {
 		sprintf(str, "M");
 	} else {
-		sprintf(str, "%0.0f%%", app->audio.volume*100);
+		sprintf(str, "%0.0f%%", app->audio.volume * 100);
 	}
 	draw_text(cr, str, x, 30);
 }
@@ -336,25 +354,29 @@ void draw_search(cairo_t *cr, struct app *app, struct rect box) {
 	path_rounded_rect(cr, box.x, box.y, box.width, box.height, 3);
 	cairo_set_source_rgba(cr, 1, 1, 1, 1);
 	cairo_fill_preserve(cr);
-	cairo_set_source_rgba(cr, 1, 1, 1, 0.8);//clr_main.r, clr_main.g, clr_main.b);
+	cairo_set_source_rgba(
+		cr, 1, 1, 1, 0.8
+	); // clr_main.r, clr_main.g, clr_main.b);
 	cairo_set_line_width(cr, 4.0);
 	cairo_stroke(cr);
 
 	// Draw the search icon
-	draw_svg_square(cr, app->svg_search, box.x+10, box.y+10, 16);
+	draw_svg_square(cr, app->svg_search, box.x + 10, box.y + 10, 16);
 
 	// Draw the input text or placeholder
 	const char *str;
 	if (strlen(app->search_str) <= 0) {
-		cairo_set_source_rgb(cr, clr_placeholder.r, clr_placeholder.g, 
-			clr_placeholder.b);
+		cairo_set_source_rgb(
+			cr, clr_placeholder.r, clr_placeholder.g, clr_placeholder.b
+		);
 		str = placeholder_str;
 	} else {
 		cairo_set_source_rgb(cr, clr_text.r, clr_text.g, clr_text.b);
 		str = app->search_str;
 	}
-	cairo_select_font_face(cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, 
-		CAIRO_FONT_WEIGHT_BOLD);
+	cairo_select_font_face(
+		cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD
+	);
 	cairo_set_font_size(cr, 16);
 	draw_text(cr, str, box.x + 35, box.y + 5 + 19);
 }
@@ -374,7 +396,7 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 	int count, first, last = 0;
 	first = app->page * 15;
 	last = first + 15;
-	for (;scp != NULL; scp = scp->next) {
+	for (; scp != NULL; scp = scp->next) {
 		if (!shortcut_matches(scp, app->search_str))
 			continue;
 		if (count < first || count >= last) {
@@ -385,7 +407,8 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 			app->shortcut_first = scp;
 		struct shortcut sc = *scp;
 		// Draw background
-		zone = (struct rect){.x = x, .y = y, .width = column_width, .height = row_height};
+		zone = (struct rect
+		){.x = x, .y = y, .width = column_width, .height = row_height};
 
 		struct hitzone *hzone = malloc(sizeof(struct hitzone));
 		hzone->rect = zone;
@@ -394,7 +417,7 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 			.shortcut = scp,
 		};
 		list_append(app->hitzones, hzone);
-		if (app->input.active && rect_contains(zone, app->input.pos)) { 
+		if (app->input.active && rect_contains(zone, app->input.pos)) {
 			// is selected index OR pointer in area
 			cairo_save(cr);
 			path_rounded_rect(cr, x, y, column_width, row_height, 5.0);
@@ -406,20 +429,27 @@ void draw_apps(cairo_t *cr, struct app *app, struct rect bounds) {
 		}
 		// Draw icon
 		if (sc.icon_filename != NULL) {
-			cairo_surface_t *img = (cairo_surface_t *)map_get(app->images, sc.icon_filename);
+			cairo_surface_t *img =
+				(cairo_surface_t *)map_get(app->images, sc.icon_filename);
 			if (img != NULL) {
-				draw_img_square(cr, img, x+(column_width-32)/2, y+8, 32);
+				draw_img_square(
+					cr, img, x + (column_width - 32) / 2, y + 8, 32
+				);
 			}
 		}
 		// Draw text
 		cairo_set_source_rgb(cr, clr.r, clr.g, clr.b);
-		cairo_select_font_face(cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL,
-				CAIRO_FONT_WEIGHT_NORMAL);
+		cairo_select_font_face(
+			cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL
+		);
 		cairo_set_font_size(cr, 14);
-		draw_text_centered(cr, sc.name, (struct point){
-			.x = x+(column_width/2), 
-			.y = (y+32+16+6)+6,
-		});
+		draw_text_centered(
+			cr, sc.name,
+			(struct point){
+				.x = x + (column_width / 2),
+				.y = (y + 32 + 16 + 6) + 6,
+			}
+		);
 		// Position adjustment
 		if (x + column_width >= bounds.x + bounds.width) {
 			y += row_height + gap;
@@ -440,32 +470,33 @@ void draw_options(cairo_t *cr, struct app *app, struct rect bounds) {
 	y = bounds.y + bounds.height - icon_size;
 
 	RsvgHandle *icons[4] = {
-		app->svg_power_off,
-		app->svg_restart,
-		app->svg_sleep,
-		app->svg_lock,
-		//app->svg_exit,
+		app->svg_power_off, app->svg_restart, app->svg_sleep, app->svg_lock,
+		// app->svg_exit,
 	};
-	
+
 	struct rect rect;
 	int padding = 5;
 	for (int i = 0; i < 4; i++) {
 		rect = (struct rect){
-			.x = x, .y = y,
-			.width = icon_size, .height = icon_size,
+			.x = x,
+			.y = y,
+			.width = icon_size,
+			.height = icon_size,
 		};
 		// draw background circle highlight
 		if (rect_contains(rect, app->input.pos)) {
 			cairo_save(cr);
-			path_rounded_rect(cr, rect.x-padding, rect.y-padding, 
-					rect.width+padding*2, rect.height+padding*2, 3);
+			path_rounded_rect(
+				cr, rect.x - padding, rect.y - padding,
+				rect.width + padding * 2, rect.height + padding * 2, 3
+			);
 			cairo_set_source_rgba(cr, 0.2, 0.2, 0.2, 0.2);
 			cairo_fill_preserve(cr);
 			cairo_stroke(cr);
 			cairo_restore(cr);
 		}
 		draw_svg_square(cr, icons[i], x, y, icon_size);
-		
+
 		struct hitzone *hzone = malloc(sizeof(struct hitzone));
 		hzone->rect = rect;
 		hzone->event = (struct custom_event){
@@ -478,12 +509,13 @@ void draw_options(cairo_t *cr, struct app *app, struct rect bounds) {
 	}
 	// Draw page count
 	char str[100];
-	sprintf(str, "Page %d/%d", app->page + 1, app->page_max+1);
-	cairo_select_font_face(cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, 
-		CAIRO_FONT_WEIGHT_BOLD);
+	sprintf(str, "Page %d/%d", app->page + 1, app->page_max + 1);
+	cairo_select_font_face(
+		cr, "Noto Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD
+	);
 	cairo_set_font_size(cr, 14);
 	cairo_set_source_rgb(cr, 1, 1, 1);
-	draw_text(cr, str, bounds.x+10, bounds.y+bounds.height-6);
+	draw_text(cr, str, bounds.x + 10, bounds.y + bounds.height - 6);
 }
 
 void update_power(struct app *app) {
@@ -492,7 +524,7 @@ void update_power(struct app *app) {
 	total = 0;
 	sum = 0;
 	char **list = batteries_list(&count);
-	//printf("got %d batteries\n", count);
+	// printf("got %d batteries\n", count);
 	for (int i = 0; i < count; i++) {
 		char *bat = list[i];
 		int cap = battery_get_capacity(bat);

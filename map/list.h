@@ -15,6 +15,6 @@ void list_empty(struct list *);
 void *list_get(struct list *, int);
 void list_append(struct list *, void *);
 void list_remove(struct list *, int);
-void list_iter(struct list *, void(*)(void *));
+void list_iter(struct list *, void (*)(void *));
 
 #endif

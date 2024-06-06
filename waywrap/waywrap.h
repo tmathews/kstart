@@ -1,6 +1,8 @@
 #if !defined(WAYWRAP)
-#define WAYWRAP 
+#define WAYWRAP
 
+#include "xdg-decoration-client-protocol.h"
+#include "xdg-shell-client-protocol.h"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -15,8 +17,6 @@
 #include <wayland-client.h>
 #include <wayland-cursor.h>
 #include <xkbcommon/xkbcommon.h>
-#include "xdg-shell-client-protocol.h"
-#include "xdg-decoration-client-protocol.h"
 
 enum pointer_event_mask {
 	POINTER_EVENT_ENTER = 1 << 0,
@@ -46,12 +46,12 @@ struct pointer_event {
 };
 
 struct client_state {
-    struct wl_display *wl_display;
-    struct wl_registry *wl_registry;
-    struct wl_shm *wl_shm;
-    struct wl_compositor *wl_compositor;
+	struct wl_display *wl_display;
+	struct wl_registry *wl_registry;
+	struct wl_shm *wl_shm;
+	struct wl_compositor *wl_compositor;
 	struct wl_seat *wl_seat;
-    struct xdg_wm_base *xdg_wm_base;
+	struct xdg_wm_base *xdg_wm_base;
 	struct zxdg_decoration_manager_v1 *deco_manager;
 
 	struct wl_cursor *cursor;
@@ -85,10 +85,10 @@ struct surface_state {
 
 	struct wl_surface *wl_surface;
 	struct wl_buffer *wl_buffer;
-    struct xdg_surface *xdg_surface;
-    struct xdg_toplevel *xdg_toplevel;
+	struct xdg_surface *xdg_surface;
+	struct xdg_toplevel *xdg_toplevel;
 	struct zxdg_toplevel_decoration_v1 *decos;
-	
+
 	struct wl_callback_listener frame_listener;
 	struct wl_buffer_listener buffer_listener;
 	struct xdg_surface_listener surface_listener;
@@ -96,8 +96,8 @@ struct surface_state {
 	struct zxdg_toplevel_decoration_v1_listener deco_listener;
 
 	void (*on_draw)(struct surface_state *, unsigned char *);
-	
-	//float offset;
+
+	// float offset;
 	uint32_t last_frame;
 	int width, height;
 	struct pointer_event *pointer;
@@ -110,64 +110,82 @@ struct surface_state {
 
 struct client_state *client_state_new();
 void client_state_destroy(struct client_state *);
-struct surface_state *surface_state_new(struct client_state *, 
-	const char *title, unsigned int width, unsigned int height);
+struct surface_state *surface_state_new(
+	struct client_state *, const char *title, unsigned int width,
+	unsigned int height
+);
 void surface_state_destroy(struct surface_state *);
-struct surface_state *surface_state_findby_wl_surface(
-	struct surface_state *, struct wl_surface *);
+struct surface_state *
+surface_state_findby_wl_surface(struct surface_state *, struct wl_surface *);
 
 // Surfaces
-void registry_global(void *, struct wl_registry *,
-	uint32_t name, const char *interface, uint32_t version);
+void registry_global(
+	void *, struct wl_registry *, uint32_t name, const char *interface,
+	uint32_t version
+);
 void registry_global_remove(void *, struct wl_registry *, uint32_t name);
 struct wl_buffer *draw_frame(struct surface_state *);
 void wl_buffer_release(void *, struct wl_buffer *);
 void wl_surface_frame_done(void *, struct wl_callback *, uint32_t time);
 void xdg_surface_configure(void *, struct xdg_surface *, uint32_t serial);
 void xdg_wm_base_ping(void *, struct xdg_wm_base *, uint32_t serial);
-void xdg_toplevel_configure(void *, struct xdg_toplevel *, 
-	int32_t width, int32_t height, struct wl_array *states);
+void xdg_toplevel_configure(
+	void *, struct xdg_toplevel *, int32_t width, int32_t height,
+	struct wl_array *states
+);
 void xdg_toplevel_close(void *, struct xdg_toplevel *);
-void zxdg_toplevel_decoration_configure(void *, 
-	struct zxdg_toplevel_decoration_v1 *, uint32_t mode);
+void zxdg_toplevel_decoration_configure(
+	void *, struct zxdg_toplevel_decoration_v1 *, uint32_t mode
+);
 
 // Seat
 void wl_seat_capabilities(void *, struct wl_seat *, uint32_t capabilities);
 void wl_seat_name(void *, struct wl_seat *, const char *name);
 
 // Pointer
-void wl_pointer_enter(void *, struct wl_pointer *,
-	uint32_t serial, struct wl_surface *, wl_fixed_t x, wl_fixed_t y);
-void wl_pointer_leave(void *, struct wl_pointer *,
-	uint32_t serial, struct wl_surface *);
-void wl_pointer_motion(void *, struct wl_pointer *, uint32_t time,
-	wl_fixed_t x, wl_fixed_t y);
-void wl_pointer_button(void *, struct wl_pointer *, uint32_t serial,
-	uint32_t time, uint32_t button, uint32_t state);
-void wl_pointer_axis(void *, struct wl_pointer *, uint32_t time,
-	uint32_t axis, wl_fixed_t value);
+void wl_pointer_enter(
+	void *, struct wl_pointer *, uint32_t serial, struct wl_surface *,
+	wl_fixed_t x, wl_fixed_t y
+);
+void wl_pointer_leave(void *, struct wl_pointer *, uint32_t serial, struct wl_surface *);
+void wl_pointer_motion(
+	void *, struct wl_pointer *, uint32_t time, wl_fixed_t x, wl_fixed_t y
+);
+void wl_pointer_button(
+	void *, struct wl_pointer *, uint32_t serial, uint32_t time,
+	uint32_t button, uint32_t state
+);
+void wl_pointer_axis(
+	void *, struct wl_pointer *, uint32_t time, uint32_t axis, wl_fixed_t value
+);
 void wl_pointer_axis_source(void *, struct wl_pointer *, uint32_t axis_source);
-void wl_pointer_axis_stop(void *, struct wl_pointer *, uint32_t time, 
-	uint32_t axis);
-void wl_pointer_axis_discrete(void *, struct wl_pointer *, uint32_t axis, 
-	int32_t discrete);
+void wl_pointer_axis_stop(
+	void *, struct wl_pointer *, uint32_t time, uint32_t axis
+);
+void wl_pointer_axis_discrete(
+	void *, struct wl_pointer *, uint32_t axis, int32_t discrete
+);
 void wl_pointer_frame(void *, struct wl_pointer *);
 
 // Keyboard
-void wl_keyboard_keymap(void *, struct wl_keyboard *,
-	uint32_t format, int32_t fd, uint32_t size);
-void wl_keyboard_enter(void *, struct wl_keyboard *,
-	uint32_t serial, struct wl_surface *,
-	struct wl_array *keys);
-void wl_keyboard_key(void *, struct wl_keyboard *,
-	uint32_t serial, uint32_t time, uint32_t key, uint32_t state);
-void wl_keyboard_leave(void *, struct wl_keyboard *,
-	uint32_t serial, struct wl_surface *);
-void wl_keyboard_modifiers(void *, struct wl_keyboard *,
-	uint32_t serial, uint32_t mods_depressed,
-	uint32_t mods_latched, uint32_t mods_locked,
-	uint32_t group);
-void wl_keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
-	int32_t rate, int32_t delay);
+void wl_keyboard_keymap(
+	void *, struct wl_keyboard *, uint32_t format, int32_t fd, uint32_t size
+);
+void wl_keyboard_enter(
+	void *, struct wl_keyboard *, uint32_t serial, struct wl_surface *,
+	struct wl_array *keys
+);
+void wl_keyboard_key(
+	void *, struct wl_keyboard *, uint32_t serial, uint32_t time, uint32_t key,
+	uint32_t state
+);
+void wl_keyboard_leave(void *, struct wl_keyboard *, uint32_t serial, struct wl_surface *);
+void wl_keyboard_modifiers(
+	void *, struct wl_keyboard *, uint32_t serial, uint32_t mods_depressed,
+	uint32_t mods_latched, uint32_t mods_locked, uint32_t group
+);
+void wl_keyboard_repeat_info(
+	void *data, struct wl_keyboard *wl_keyboard, int32_t rate, int32_t delay
+);
 
 #endif

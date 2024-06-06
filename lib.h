@@ -1,4 +1,5 @@
 #include <librsvg/rsvg.h>
+
 #include "audio.h"
 #include "draw.h"
 #include "map/hash.h"
@@ -7,8 +8,9 @@
 
 #define KDATA_DIR "/usr/local/share/kallos/data/"
 
-#define FREE_SVG(NAME) if (app->svg_##NAME != NULL)\
-	g_object_unref(app->svg_##NAME);
+#define FREE_SVG(NAME)                                                         \
+	if (app->svg_##NAME != NULL)                                               \
+		g_object_unref(app->svg_##NAME);
 
 enum EV_TYPE {
 	EV_RUN,
@@ -35,7 +37,7 @@ struct inputs {
 struct custom_event {
 	enum EV_TYPE type;
 	struct custom_event *next;
-	
+
 	// TODO unionize custom_event
 	struct shortcut *shortcut;
 	int option_type;
@@ -85,5 +87,6 @@ void datestr(char *str, const char *fmt);
 struct shortcut *read_shortcuts(char *filename);
 bool shortcut_matches(struct shortcut *sc, const char *filter_str);
 bool rect_contains(struct rect, struct point);
-struct custom_event *add_cevent(struct custom_event *head, struct custom_event new);
+struct custom_event *
+add_cevent(struct custom_event *head, struct custom_event new);
 void free_cevent(struct custom_event *ev, bool chain);

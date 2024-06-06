@@ -3,6 +3,9 @@
 
 #define M_PI 3.14159265358979323846
 
+#include <cairo.h>
+#include <librsvg/rsvg.h>
+
 struct color {
 	double a;
 	double r;
@@ -16,12 +19,13 @@ struct point {
 
 struct rect {
 	int x, y;
-	int width, height;	
+	int width, height;
 };
 
 struct color hex2rgb(unsigned int val);
-void path_rounded_rect(cairo_t *, double x, double y, double width, 
-	double height, double r);
+void path_rounded_rect(
+	cairo_t *, double x, double y, double width, double height, double r
+);
 void draw_svg_square(cairo_t *, RsvgHandle *, int x, int y, int size);
 void draw_img_square(cairo_t *cr, cairo_surface_t *img, int x, int y, int size);
 double draw_text(cairo_t *cr, const char *str, int origin_x, int origin_y);

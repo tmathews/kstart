@@ -2,9 +2,9 @@
 #define FILE_audio
 
 #include <pulse/mainloop-signal.h>
-#include <stdbool.h>
 #include <pulse/mainloop.h>
 #include <pulse/pulseaudio.h>
+#include <stdbool.h>
 
 struct audio {
 	pa_mainloop *loop;
