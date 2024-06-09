@@ -1,14 +1,15 @@
-// #define _POSIX_C_SOURCE 200112L
-#include "audio.h"
-#include "draw.h"
-#include "keyhold.h"
-#include "lib.h"
-#include "sys/power.h"
-#include "waywrap/waywrap.h"
 #include <cairo/cairo.h>
 #include <iwlib.h>
 #include <librsvg/rsvg.h>
 #include <wordexp.h>
+
+#include "draw.h"
+#include "keyhold.h"
+#include "lib.h"
+#include "sys/audio.h"
+#include "sys/bluetooth.h"
+#include "sys/power.h"
+#include "waywrap/waywrap.h"
 
 void draw(struct surface_state *, cairo_t *);
 void draw_status(cairo_t *, struct app *, struct rect);
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
 	update_power(app);
 	update_wifi(app);
 	audio_process(&app->audio);
+	app->bluetooth_on = isBluetoothAdapterOn();
 
 	printf("new client_state\n");
 
@@ -73,11 +75,6 @@ int main(int argc, char *argv[]) {
 			keyhold_root, state->key_repeat_delay, state->key_repeat_rate,
 			on_key_repeat
 		);
-		// If there is no active input let's bounce out of here!
-		// if (!first && state->active_surface_pointer == NULL &&
-		//	state->active_surface_keyboard == NULL) {
-		//	running = false;
-		//}
 		app_process_inputs(app);
 		if (app_process_events(app)) {
 			running = false;
@@ -85,6 +82,7 @@ int main(int argc, char *argv[]) {
 		if (tick > 180) {
 			update_power(app);
 			update_wifi(app);
+			app->bluetooth_on = isBluetoothAdapterOn();
 			tick = 0;
 		}
 		tick++;
@@ -306,12 +304,6 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	sprintf(str, "%0.0f%%", app->battery_percent);
 	offset = draw_text(cr, str, x, 30);
 	cairo_restore(cr);
-	// Draw Bluetooth
-	// x += offset + spacing;
-	// draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
-	// x += icon_size + 8;
-	// draw_text(cr, "N/I", x, 30);
-	//
 	// Draw Volume
 	x += offset + spacing;
 	// draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
@@ -346,6 +338,16 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 		sprintf(str, "%0.0f%%", app->audio.volume * 100);
 	}
 	draw_text(cr, str, x, 30);
+	// Draw Bluetooth
+	x += offset + spacing;
+	draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
+	x += icon_size + 8;
+	if (app->bluetooth_on) {
+		draw_text(cr, "On", x, 30);
+		// TODO draw number of connected devices
+	} else {
+		draw_text(cr, "Off", x, 30);
+	}
 }
 
 void draw_search(cairo_t *cr, struct app *app, struct rect box) {

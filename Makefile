@@ -1,11 +1,11 @@
-FLAGS = $(shell pkg-config --cflags --libs librsvg-2.0 libpulse)
+FLAGS = $(shell pkg-config --cflags --libs librsvg-2.0 libpulse bluez)
 
 build: protocol
 	cc -g -o kstart \
-		main.c keyhold.c draw.c lib.c audio.c\
+		main.c keyhold.c draw.c lib.c\
 		map/hash.c \
 		map/list.c \
-		sys/power.c \
+		sys/power.c sys/audio.c\
 		waywrap/*.c \
 		-lwayland-client -lwayland-cursor -lrt -lxkbcommon -lcairo -liw \
 		-lm $(FLAGS)

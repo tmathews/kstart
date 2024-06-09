@@ -1,9 +1,9 @@
 #include <librsvg/rsvg.h>
 
-#include "audio.h"
 #include "draw.h"
 #include "map/hash.h"
 #include "map/list.h"
+#include "sys/audio.h"
 #include "waywrap/waywrap.h"
 
 #define KDATA_DIR "/usr/local/share/kallos/data/"
@@ -60,7 +60,6 @@ struct app {
 	struct shortcut *shortcut_first;
 	RsvgHandle *svg_battery;
 	RsvgHandle *svg_bluetooth;
-	RsvgHandle *svg_bluetooth_off;
 	RsvgHandle *svg_exit;
 	RsvgHandle *svg_lock;
 	RsvgHandle *svg_power_off;
@@ -72,6 +71,7 @@ struct app {
 	float battery_percent;
 	bool battery_charging;
 	bool wifi_found;
+	bool bluetooth_on;
 	int8_t wifi_signal;
 	char wifi_ssid[512];
 	int page, page_max;
