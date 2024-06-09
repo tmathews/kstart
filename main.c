@@ -247,20 +247,23 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	draw_text_rtl(
 		cr, str, (struct point){.x = bounds.width - 20, .y = bounds.y + 30}
 	);
+	int radius = 0;
 	// Draw Wifi
-	cairo_save(cr);
-	cairo_translate(cr, x, 24);
-	// cairo_set_source_rgba(cr, .2, .2, .2, 0.1);
-	cairo_set_source_rgba(cr, 1., 1., 1., 0.2);
-	cairo_new_sub_path(cr);
-	int radius = 16;
-	cairo_arc(cr, 8, 8, radius, -0.75 * M_PI, -0.25 * M_PI);
-	cairo_line_to(cr, 8, 8);
-	cairo_close_path(cr);
-	cairo_set_line_width(cr, 1.);
-	cairo_stroke(cr);
-	cairo_restore(cr);
-	// TODO fix wifi_found drawing
+	{
+		cairo_save(cr);
+		cairo_translate(cr, x, 24);
+		// cairo_set_source_rgba(cr, .2, .2, .2, 0.1);
+		cairo_set_source_rgba(cr, 1., 1., 1., 0.2);
+		cairo_new_sub_path(cr);
+		radius = 16;
+		cairo_arc(cr, 8, 8, radius, -0.75 * M_PI, -0.25 * M_PI);
+		cairo_line_to(cr, 8, 8);
+		cairo_close_path(cr);
+		cairo_set_line_width(cr, 1.);
+		cairo_stroke(cr);
+		cairo_restore(cr);
+	}
+	// TODO fix wifi_found drawing - Um what did i mean by this?
 	// if (app->wifi_found) {
 	//	//cairo_fill(cr);
 	//} else {
@@ -306,31 +309,28 @@ void draw_status(cairo_t *cr, struct app *app, struct rect bounds) {
 	cairo_restore(cr);
 	// Draw Volume
 	x += offset + spacing;
-	// draw_svg_square(cr, app->svg_bluetooth, x, 16, icon_size);
 	{
 		cairo_save(cr);
-		cairo_translate(cr, x, 32);
-		cairo_set_source_rgba(cr, 1., 1., 1., .2);
+		cairo_translate(cr, x, 16);
 		cairo_new_sub_path(cr);
-		cairo_line_to(cr, 0, 0);
-		cairo_line_to(cr, 16, 0);
-		cairo_line_to(cr, 16, -16);
-		cairo_close_path(cr);
-		cairo_fill(cr);
+		cairo_arc(cr, 8, 8, 8, -.5 * M_PI, 1.5 * M_PI);
+		cairo_set_source_rgba(cr, 1., 1., 1., 0.2);
+		cairo_set_line_width(cr, 2.);
+		cairo_stroke(cr);
 		cairo_restore(cr);
 	}
-	cairo_save(cr);
-	cairo_translate(cr, x, 32);
-	cairo_set_source_rgba(cr, 1., 1., 1., 1.);
-	cairo_new_sub_path(cr);
-	radius = volume_to_radius(app->audio.volume);
-	// cairo_arc(cr, 8, 8, radius, -0.75*M_PI, -0.25*M_PI);
-	cairo_line_to(cr, 0, 0);
-	cairo_line_to(cr, radius, 0);
-	cairo_line_to(cr, radius, -radius);
-	cairo_close_path(cr);
-	cairo_fill(cr);
-	cairo_restore(cr);
+	{
+		float r = (app->audio.volume * 2) - 0.5;
+		cairo_save(cr);
+		cairo_translate(cr, x, 16);
+		cairo_new_sub_path(cr);
+		cairo_arc(cr, 8, 8, 8, -.5 * M_PI, r * M_PI);
+		cairo_line_to(cr, 8, 8);
+		cairo_set_source_rgba(cr, 1., 1., 1., 1.);
+		cairo_set_line_width(cr, 2.);
+		cairo_stroke(cr);
+		cairo_restore(cr);
+	}
 	x += icon_size + 8; // icon_size + 8;
 	if (app->audio.muted) {
 		sprintf(str, "M");
