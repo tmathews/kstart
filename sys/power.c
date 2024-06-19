@@ -1,9 +1,9 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <dirent.h>
-#include <ctype.h>
 #include "power.h"
+#include <ctype.h>
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define POWER_DIR "/sys/class/power_supply/"
 
@@ -25,32 +25,56 @@ bool ac_is_online() {
 static int bat_filter(const struct dirent *d) {
 	if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
 		return 0;
+	if (strncmp("BAT", d->d_name, 3) != 0) {
+		return 0;
+	}
 	char *a = strjoin(d->d_name, "/type\0");
 	char *str = strjoin(POWER_DIR, a);
 	free(a);
 	int valid = 0;
-	//printf("%s\n", str);
+	// printf("%s\n", str);
 	char *buf = read_file(str);
 	if (buf) {
-		//printf("buf: %s\n", buf);
+		// printf("buf: %s\n", buf);
 		if (strcmp(buf, "Battery\n") == 0) {
 			valid = 1;
 		}
 		free(buf);
 	}
 	free(str);
-	//printf("entry %s\n", d->d_name);
+	// printf("entry %s\n", d->d_name);
 	return valid;
 }
+
+// static int bat_filter(const struct dirent *d) {
+//	if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0)
+//		return 0;
+//	char *a = strjoin(d->d_name, "/type\0");
+//	char *str = strjoin(POWER_DIR, a);
+//	free(a);
+//	int valid = 0;
+//	//printf("%s\n", str);
+//	char *buf = read_file(str);
+//	if (buf) {
+//		//printf("buf: %s\n", buf);
+//		if (strcmp(buf, "Battery\n") == 0) {
+//			valid = 1;
+//		}
+//		free(buf);
+//	}
+//	free(str);
+//	//printf("entry %s\n", d->d_name);
+//	return valid;
+// }
 
 char **batteries_list(unsigned int *size) {
 	char **bats = NULL;
 	struct dirent **eps;
 	int n = scandir(POWER_DIR, &eps, bat_filter, alphasort);
 	if (n >= 0) {
-		//printf("got %d entries\n", n);
+		// printf("got %d entries\n", n);
 		*size = (unsigned int)n;
-		bats = calloc(n, sizeof(char*));
+		bats = calloc(n, sizeof(char *));
 		for (int i = 0; i < n; i++) {
 			bats[i] = strjoin(POWER_DIR, eps[i]->d_name);
 		}
@@ -61,7 +85,7 @@ char **batteries_list(unsigned int *size) {
 int battery_get_capacity(const char *filename) {
 	char *str = strjoin(filename, "/capacity\0");
 	char *buf = read_file(str);
-	//printf("cap %s\n", buf);
+	// printf("cap %s\n", buf);
 	free(str);
 	if (buf == NULL) {
 		return -1;
@@ -74,7 +98,7 @@ int battery_get_capacity(const char *filename) {
 enum battery_status battery_get_status(const char *filename) {
 	char *str = strjoin(filename, "/status\0");
 	char *buf = read_file(str);
-	//printf("%s: '%s'\n", str, buf);
+	// printf("%s: '%s'\n", str, buf);
 	free(str);
 	enum battery_status s = BS_UNKNOWN;
 	if (!buf)
@@ -126,22 +150,22 @@ extern char *read_file(const char *filename) {
 extern char *strjoin(const char *a, const char *b) {
 	char *str = malloc(strlen(a) + strlen(b) + 1);
 	strcpy(str, a);
-   	strcat(str, b);
+	strcat(str, b);
 	return str;
 }
 
 char *ltrim(char *s) {
-    while(isspace(*s)) s++;
-    return s;
+	while (isspace(*s))
+		s++;
+	return s;
 }
 
 char *rtrim(char *s) {
-    char* back = s + strlen(s);
-    while(isspace(*--back));
-    *(back+1) = '\0';
-    return s;
+	char *back = s + strlen(s);
+	while (isspace(*--back))
+		;
+	*(back + 1) = '\0';
+	return s;
 }
 
-char *trim(char *s) {
-    return rtrim(ltrim(s));
-}
+char *trim(char *s) { return rtrim(ltrim(s)); }

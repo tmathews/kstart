@@ -30,6 +30,21 @@ struct keyhold *keyhold_root = NULL;
 
 cairo_surface_t *surf;
 
+int msleep(long msec) {
+	struct timespec ts;
+	int res;
+	if (msec < 0) {
+		errno = EINVAL;
+		return -1;
+	}
+	ts.tv_sec = msec / 1000;
+	ts.tv_nsec = (msec % 1000) * 1000000;
+	do {
+		res = nanosleep(&ts, &ts);
+	} while (res && errno == EINTR);
+	return res;
+}
+
 int main(int argc, char *argv[]) {
 	clr_placeholder = hex2rgb(0x999999);
 	clr_text = hex2rgb(0x313131);
@@ -87,6 +102,7 @@ int main(int argc, char *argv[]) {
 		}
 		tick++;
 		first = false;
+		msleep(15);
 	}
 	client_state_destroy(state);
 	app_free(app);
@@ -549,7 +565,8 @@ void update_power(struct app *app) {
 void update_wifi(struct app *app) {
 	app->wifi_found = false;
 	iwrange range;
-	char *device = "wlan0"; // TODO select first active wlan device
+	// TODO select first active wlan device
+	char *device = "wlan0";
 	int sock = iw_sockets_open();
 	if (sock == -1 || iw_get_range_info(sock, device, &range) < 0) {
 		return;
@@ -557,10 +574,13 @@ void update_wifi(struct app *app) {
 	iwstats stats;
 	wireless_config wc;
 	if (iw_get_basic_config(sock, device, &wc) == 0) {
-		app->wifi_found = true;
-		strcpy(app->wifi_ssid, wc.essid); // TODO copy ssid str by max len...
-		iw_get_stats(sock, device, &stats, &range, true);
-		app->wifi_signal = (int8_t)stats.qual.level;
+		int status = iw_get_stats(sock, device, &stats, &range, true);
+		if (status >= 0) {
+			// TODO copy ssid str by max len...
+			strcpy(app->wifi_ssid, wc.essid);
+			app->wifi_found = true;
+			app->wifi_signal = (int8_t)stats.qual.level;
+		}
 	}
 	iw_sockets_close(sock);
 }
