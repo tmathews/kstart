@@ -1,7 +1,7 @@
-#include <string.h>
-#include <librsvg/rsvg.h>
-#include <cairo/cairo.h>
 #include "draw.h"
+#include <cairo/cairo.h>
+#include <librsvg/rsvg.h>
+#include <string.h>
 
 struct color hex2rgb(unsigned int val) {
 	struct color c;
@@ -11,14 +11,36 @@ struct color hex2rgb(unsigned int val) {
 	return c;
 }
 
-void path_rounded_rect(cairo_t *cr, double x, double y, double width, double height, double radius) {
+void path_rounded_rect(
+	cairo_t *cr, double x, double y, double width, double height, double radius
+) {
 	double degrees = M_PI / 180.0;
 	cairo_new_sub_path(cr);
-	cairo_arc(cr, x + width - radius, y + radius, radius, -90 * degrees, 0 * degrees);
-	cairo_arc(cr, x + width - radius, y + height - radius, radius, 0 * degrees, 90 * degrees);
-	cairo_arc(cr, x + radius, y + height - radius, radius, 90 * degrees, 180 * degrees);
+	cairo_arc(
+		cr, x + width - radius, y + radius, radius, -90 * degrees, 0 * degrees
+	);
+	cairo_arc(
+		cr, x + width - radius, y + height - radius, radius, 0 * degrees,
+		90 * degrees
+	);
+	cairo_arc(
+		cr, x + radius, y + height - radius, radius, 90 * degrees, 180 * degrees
+	);
 	cairo_arc(cr, x + radius, y + radius, radius, 180 * degrees, 270 * degrees);
 	cairo_close_path(cr);
+}
+
+void draw_svg_square_white(
+	cairo_t *cr, RsvgHandle *handle, int x, int y, int size
+) {
+	cairo_save(cr);
+	cairo_push_group(cr);
+	draw_svg_square(cr, handle, x, y, size);
+	cairo_pattern_t *pat = cairo_pop_group(cr);
+	cairo_set_source_rgba(cr, 1, 1, 1, 1);
+	cairo_mask(cr, pat);
+	cairo_fill(cr);
+	cairo_restore(cr);
 }
 
 void draw_svg_square(cairo_t *cr, RsvgHandle *handle, int x, int y, int size) {
@@ -33,7 +55,9 @@ void draw_svg_square(cairo_t *cr, RsvgHandle *handle, int x, int y, int size) {
 	rsvg_handle_render_document(handle, cr, &rect, NULL);
 }
 
-void draw_img_square(cairo_t *cr, cairo_surface_t *img, int x, int y, int size) {
+void draw_img_square(
+	cairo_t *cr, cairo_surface_t *img, int x, int y, int size
+) {
 	int w = cairo_image_surface_get_width(img);
 	float scale = (float)size / (float)w;
 	cairo_save(cr);
@@ -52,13 +76,13 @@ double draw_text(cairo_t *cr, const char *str, int origin_x, int origin_y) {
 	int len = strlen(str);
 	cairo_font_extents(cr, &fe);
 	cairo_move_to(cr, 0, 0);
-	for (int i=0; i < len; i++) {
-	    *letter = '\0';
-	    strncat(letter, str + i, 1);
-	    cairo_text_extents(cr, letter, &te);
-	    cairo_move_to(cr, origin_x + x, origin_y);
+	for (int i = 0; i < len; i++) {
+		*letter = '\0';
+		strncat(letter, str + i, 1);
+		cairo_text_extents(cr, letter, &te);
+		cairo_move_to(cr, origin_x + x, origin_y);
 		x += te.x_advance;
-	    cairo_show_text(cr, letter);
+		cairo_show_text(cr, letter);
 	}
 	return x;
 }
@@ -68,10 +92,10 @@ double draw_text_rtl(cairo_t *cr, const char *str, struct point origin) {
 	char letter[2];
 	double x = 0;
 	int len = strlen(str);
-	for (int i=0; i < len; i++) {
-	    *letter = '\0';
-	    strncat(letter, str + i, 1);
-	    cairo_text_extents(cr, letter, &te);
+	for (int i = 0; i < len; i++) {
+		*letter = '\0';
+		strncat(letter, str + i, 1);
+		cairo_text_extents(cr, letter, &te);
 		x += te.x_advance;
 	}
 	origin.x -= x;
@@ -83,12 +107,12 @@ double draw_text_centered(cairo_t *cr, const char *str, struct point origin) {
 	char letter[2];
 	double x = 0;
 	int len = strlen(str);
-	for (int i=0; i < len; i++) {
-	    *letter = '\0';
-	    strncat(letter, str + i, 1);
-	    cairo_text_extents(cr, letter, &te);
+	for (int i = 0; i < len; i++) {
+		*letter = '\0';
+		strncat(letter, str + i, 1);
+		cairo_text_extents(cr, letter, &te);
 		x += te.x_advance;
 	}
-	origin.x -= x/2;
+	origin.x -= x / 2;
 	return draw_text(cr, str, origin.x, origin.y);
 }

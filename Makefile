@@ -28,8 +28,8 @@ clean:
 	rm -f waywrap/*-protocol.h waywrap/*-protocol.c kstart
 
 install:
-	mkdir -p /usr/local/share/kallos/
-	cp -r data /usr/local/share/kallos/data
+	mkdir -p /usr/local/share/kallos/data
+	cp -r data/* /usr/local/share/kallos/data/
 	cp kstart /usr/local/bin/
 
 .PHONY: build protocol clean install

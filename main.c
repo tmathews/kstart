@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 		}
 		tick++;
 		first = false;
-		msleep(15);
+		msleep(1);
 	}
 	client_state_destroy(state);
 	app_free(app);
@@ -514,7 +514,7 @@ void draw_options(cairo_t *cr, struct app *app, struct rect bounds) {
 			cairo_stroke(cr);
 			cairo_restore(cr);
 		}
-		draw_svg_square(cr, icons[i], x, y, icon_size);
+		draw_svg_square_white(cr, icons[i], x, y, icon_size);
 
 		struct hitzone *hzone = malloc(sizeof(struct hitzone));
 		hzone->rect = rect;
